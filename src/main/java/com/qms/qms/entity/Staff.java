@@ -23,6 +23,9 @@ public class Staff {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
+    @Column(nullable = false, length = 100)
+    private String password;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 30, nullable = false)
     private StaffRole role;

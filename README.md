@@ -36,9 +36,55 @@ exception/        ResourceNotFoundException, InvalidTicketStateException, Global
 config/           CORS cho FE gọi API
 ```
 
+## Đăng nhập
+
+Toàn bộ API `/api/**` (trừ `/api/auth/**` và Swagger) yêu cầu JWT trong header
+`Authorization: Bearer <accessToken>`. Tài khoản đăng nhập dùng `code` của bảng `staff` làm username.
+Mật khẩu lưu dạng BCrypt (`staff.password`), mật khẩu mặc định cho toàn bộ tài khoản seed là `123456`.
+
+```
+POST /api/auth/login
+{ "username": "QA001", "password": "123456" }
+→ { accessToken, refreshToken, tokenType, expiresInMs, staffId, code, fullName, role }
+```
+
+- `accessToken` (JWT) hết hạn sau **1 giờ** (`jwt.expiration-ms`).
+- `refreshToken` (chuỗi ngẫu nhiên lưu ở bảng `refresh_token`) hết hạn sau **30 ngày**
+  (`jwt.refresh-expiration-ms`), dùng để lấy access token mới mà không cần đăng nhập lại:
+
+```
+POST /api/auth/refresh
+{ "refreshToken": "..." }
+→ { accessToken, refreshToken, ... }   (refresh token cũ bị thu hồi ngay - rotation)
+
+POST /api/auth/logout
+{ "refreshToken": "..." }
+→ 204, thu hồi refresh token (đăng xuất thật sự trên server)
+```
+
+## Upload ảnh (Cloudflare R2)
+
+```
+POST /api/uploads/images   (multipart/form-data, field "files", nhiều file)
+→ ["https://pub-xxxx.r2.dev/qa-ticket/<uuid>.jpg", ...]   (cùng thứ tự với files gửi lên)
+```
+
+Nhiều ảnh trong 1 request được upload **song song** (thread pool cố định, `r2.upload-thread-pool-size`,
+mặc định 8 luồng) thay vì tuần tự — xem `R2StorageService.uploadAll`. Chỉ nhận `image/jpeg|png|webp|gif`,
+tối đa 10MB/ảnh, 50MB/request (`spring.servlet.multipart.*`). URL trả về dùng trực tiếp trong
+`images` của `QaTicketDefectLocationRequest` khi tạo/sửa ticket. Cấu hình R2 (`r2.endpoint`, `r2.bucket`,
+`r2.access-key`, `r2.secret-key`, `r2.public-base-url`) đặt trong `application-local.properties`
+(không commit) hoặc qua biến môi trường `R2_*`.
+
 ## API
 
 ```
+POST   /api/auth/login              đăng nhập, trả accessToken + refreshToken
+POST   /api/auth/refresh            lấy accessToken mới từ refreshToken (rotation)
+POST   /api/auth/logout             thu hồi refreshToken
+
+POST   /api/uploads/images          upload nhiều ảnh song song lên R2, trả về URL
+
 POST   /api/qa-tickets              tạo mới (payload lồng nhau: ticket + defects + locations + images)
 PUT    /api/qa-tickets/{id}         cập nhật toàn bộ (dùng cho sửa/lưu draft)
 GET    /api/qa-tickets/{id}         chi tiết 1 phiếu (đầy đủ cây con)
