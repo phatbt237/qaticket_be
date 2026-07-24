@@ -1,0 +1,15 @@
+target/
+.git/
+.idea/
+.claude/
+.vscode/
+*.iml
+Dockerfile
+.dockerignore
+README.md
+
+# never bake real local secrets into an image, even for local `docker build` testing
+application-local.properties
+application-local.yml
+application-local.yaml
+.env

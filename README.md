@@ -13,13 +13,41 @@ aggregate root `QaTicket` (Ticket → Defect → Location → Image), REST API v
 ## Chạy local
 
 1. Tạo database Postgres tên `qms` (hoặc set biến môi trường khác).
-2. Cấu hình kết nối qua biến môi trường (mặc định trong `application.properties`, file này không commit lên git):
+2. `application.properties` (đã commit) chỉ chứa placeholder đọc từ biến môi trường, không có secret
+   thật nào. Secret thật (DB Neon, R2, JWT) đặt trong `application-local.properties` — file này
+   **không commit** (đã gitignore), profile `local` sẽ tự động dùng nó khi chạy `mvn spring-boot:run`.
    - `DB_HOST` (localhost), `DB_PORT` (5432), `DB_NAME` (qms), `DB_USER` (postgres), `DB_PASSWORD` (postgres)
+   - `JWT_SECRET` **bắt buộc phải set** (không có default) — đặt trong `application-local.properties`
+     hoặc export biến môi trường trước khi chạy.
 3. Chạy:
    ```
    mvn spring-boot:run
    ```
    Flyway sẽ tự tạo toàn bộ schema (14 bảng + sequence `qa_ticket_seq`) khi khởi động.
+
+## Deploy Docker / Render
+
+```
+docker build -t qms-backend .
+docker run -p 8080:8080 --env-file .env qms-backend
+```
+
+Trên Render: tạo **Web Service** kiểu **Docker**, trỏ vào repo này (Render tự nhận `Dockerfile` ở
+gốc repo). App đọc cổng qua `$PORT` mà Render tự inject, không cần set `SERVER_PORT` thủ công.
+
+Biến môi trường cần set trong Render dashboard (Settings → Environment):
+
+- `SPRING_PROFILES_ACTIVE` — đặt bất kỳ giá trị khác `local` (vd `render`), tránh nhầm lẫn tên thôi,
+  vì `application-local.properties` không có trong image nên dù để `local` cũng không lỗi.
+- `JWT_SECRET` — **bắt buộc**, chuỗi ngẫu nhiên đủ dài (vd `openssl rand -base64 48`).
+- Database: hoặc set `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` (khớp pattern
+  URL không query param), hoặc set thẳng `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` /
+  `SPRING_DATASOURCE_PASSWORD` nếu DB cần query param như Neon (`?sslmode=require&...`) — env var
+  này override toàn bộ `spring.datasource.url` trong file.
+- `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_PUBLIC_BASE_URL` — cấu hình
+  Cloudflare R2 để upload ảnh (`/api/uploads/images`).
+- Tùy chọn: `JWT_EXPIRATION_MS` (mặc định 3600000 = 1h), `JWT_REFRESH_EXPIRATION_MS` (mặc định
+  2592000000 = 30 ngày), `R2_UPLOAD_THREAD_POOL_SIZE` (mặc định 8).
 
 ## Cấu trúc chính
 
