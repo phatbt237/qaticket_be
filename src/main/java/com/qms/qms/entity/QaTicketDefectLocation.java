@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "qa_ticket_defect_location")
@@ -34,7 +34,7 @@ public class QaTicketDefectLocation {
     private Integer quantity = 1;
 
     @OneToMany(mappedBy = "qaTicketDefectLocation", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<QaTicketDefectImage> images = new ArrayList<>();
+    private Set<QaTicketDefectImage> images = new LinkedHashSet<>();
 
     public void addImage(QaTicketDefectImage image) {
         images.add(image);
