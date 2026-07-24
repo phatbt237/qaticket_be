@@ -1,0 +1,317 @@
+# Đặc tả chi tiết hệ thống Garment QA Checking (QMS) — dùng để code Spring Boot
+
+## 1. Tổng quan
+
+Hệ thống gồm 14 bảng, chia 3 nhóm:
+- **Nhóm danh mục (master data)**: STAFF, FACTORY, LINE, PRODUCTION_GROUP, CUSTOMER, STYLE, GARMENT_TYPE, GARMENT_LOCATION, DEFECT
+- **Nhóm đơn hàng**: PURCHASE_ORDER
+- **Nhóm giao dịch (transaction, aggregate root = QA_TICKET)**: QA_TICKET, QA_TICKET_DEFECT, QA_TICKET_DEFECT_LOCATION, QA_TICKET_DEFECT_IMAGE
+
+Nguyên tắc thiết kế: mọi tên hiển thị (nhân viên, nhà máy, khách hàng, loại lỗi...) đều lấy qua **FK + JOIN**, không lưu text trùng lặp trong bảng giao dịch.
+
+---
+
+## 2. Chi tiết từng bảng
+
+### 2.1 STAFF
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| code | VARCHAR(50) | UNIQUE |
+| full_name | VARCHAR(150) | NOT NULL |
+| role | VARCHAR(30) | enum: `QA_INSPECTOR`, `QA_LEAD`, `ADMIN` |
+| active | BOOLEAN | default true |
+
+### 2.2 FACTORY
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| code | VARCHAR(50) | UNIQUE |
+| name | VARCHAR(150) | NOT NULL |
+| address | VARCHAR(255) | nullable |
+
+### 2.3 LINE
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| factory_id | BIGINT | FK -> FACTORY.id, NOT NULL |
+| code | VARCHAR(50) | |
+| name | VARCHAR(100) | NOT NULL |
+
+### 2.4 PRODUCTION_GROUP (Cụm/Group)
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| line_id | BIGINT | FK -> LINE.id, NOT NULL |
+| name | VARCHAR(100) | NOT NULL |
+
+### 2.5 CUSTOMER
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| name | VARCHAR(150) | NOT NULL, UNIQUE |
+
+### 2.6 STYLE
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| code | VARCHAR(50) | UNIQUE |
+| name | VARCHAR(150) | nullable |
+
+### 2.7 GARMENT_TYPE
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| name | VARCHAR(100) | NOT NULL, UNIQUE |
+
+### 2.8 GARMENT_LOCATION
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| garment_type_id | BIGINT | FK -> GARMENT_TYPE.id, NOT NULL |
+| name | VARCHAR(100) | NOT NULL — VD: "Cổ áo", "Tay áo", "Sườn" |
+
+### 2.9 DEFECT
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| code | VARCHAR(50) | UNIQUE, nullable |
+| name_en | VARCHAR(150) | nullable |
+| name_vi | VARCHAR(150) | NOT NULL |
+
+### 2.10 PURCHASE_ORDER (PO)
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| style_id | BIGINT | FK -> STYLE.id, nullable |
+| customer_id | BIGINT | FK -> CUSTOMER.id, NOT NULL |
+| po_code | VARCHAR(50) | UNIQUE, NOT NULL |
+| po_quantity | INT | nullable |
+| date_start | DATE | nullable |
+| date_shipment | DATE | nullable |
+
+### 2.11 QA_TICKET (bảng chính — aggregate root)
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| ticket_code | VARCHAR(20) | UNIQUE, auto-generate, VD "I00003" |
+| staff_id | BIGINT | FK -> STAFF.id, NOT NULL |
+| factory_id | BIGINT | FK -> FACTORY.id, NOT NULL |
+| line_id | BIGINT | FK -> LINE.id, NOT NULL |
+| group_id | BIGINT | FK -> PRODUCTION_GROUP.id, nullable |
+| po_id | BIGINT | FK -> PURCHASE_ORDER.id, nullable |
+| customer_id | BIGINT | FK -> CUSTOMER.id, NOT NULL |
+| garment_type_id | BIGINT | FK -> GARMENT_TYPE.id, NOT NULL |
+| inspection_stage | VARCHAR(30) | enum: `INLINE`, `ENDLINE`, `FINAL`, `INPUT` |
+| inspected_qty | INT | NOT NULL, default 0 |
+| status | VARCHAR(20) | enum: `DRAFT`, `SUBMITTED` — default `DRAFT` |
+| created_at | TIMESTAMP | auto |
+| updated_at | TIMESTAMP | auto |
+
+### 2.12 QA_TICKET_DEFECT
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| qa_ticket_id | BIGINT | FK -> QA_TICKET.id, NOT NULL, ON DELETE CASCADE |
+| defect_id | BIGINT | FK -> DEFECT.id, NOT NULL |
+| note | VARCHAR(255) | nullable |
+
+### 2.13 QA_TICKET_DEFECT_LOCATION
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| qa_ticket_defect_id | BIGINT | FK -> QA_TICKET_DEFECT.id, NOT NULL, ON DELETE CASCADE |
+| garment_location_id | BIGINT | FK -> GARMENT_LOCATION.id, nullable |
+| location_text | VARCHAR(150) | NOT NULL — luôn lưu, kể cả khi chọn từ danh mục |
+| quantity | INT | NOT NULL, default 1 |
+
+### 2.14 QA_TICKET_DEFECT_IMAGE
+| Cột | Kiểu | Ràng buộc |
+|---|---|---|
+| id | BIGSERIAL | PK |
+| qa_ticket_defect_location_id | BIGINT | FK -> QA_TICKET_DEFECT_LOCATION.id, NOT NULL, ON DELETE CASCADE |
+| image_url | VARCHAR(500) | NOT NULL |
+| uploaded_at | TIMESTAMP | auto |
+
+---
+
+## 3. Entity JPA (Java)
+
+```java
+@Entity @Table(name = "qa_ticket")
+public class QaTicket {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, length = 20)
+    private String ticketCode;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "staff_id", nullable = false)
+    private Staff staff;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "factory_id", nullable = false)
+    private Factory factory;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "line_id", nullable = false)
+    private Line line;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "group_id")
+    private ProductionGroup group;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "po_id")
+    private PurchaseOrder purchaseOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "garment_type_id", nullable = false)
+    private GarmentType garmentType;
+
+    @Enumerated(EnumType.STRING)
+    private InspectionStage inspectionStage;
+
+    private Integer inspectedQty;
+
+    @Enumerated(EnumType.STRING)
+    private TicketStatus status = TicketStatus.DRAFT;
+
+    @CreationTimestamp private LocalDateTime createdAt;
+    @UpdateTimestamp private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "qaTicket", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<QaTicketDefect> defects = new ArrayList<>();
+}
+
+@Entity @Table(name = "qa_ticket_defect")
+public class QaTicketDefect {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "qa_ticket_id", nullable = false)
+    private QaTicket qaTicket;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "defect_id", nullable = false)
+    private Defect defect;
+
+    private String note;
+
+    @OneToMany(mappedBy = "qaTicketDefect", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<QaTicketDefectLocation> locations = new ArrayList<>();
+}
+
+@Entity @Table(name = "qa_ticket_defect_location")
+public class QaTicketDefectLocation {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "qa_ticket_defect_id", nullable = false)
+    private QaTicketDefect qaTicketDefect;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "garment_location_id")
+    private GarmentLocation garmentLocation;
+
+    private String locationText;
+    private Integer quantity = 1;
+
+    @OneToMany(mappedBy = "qaTicketDefectLocation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<QaTicketDefectImage> images = new ArrayList<>();
+}
+
+@Entity @Table(name = "qa_ticket_defect_image")
+public class QaTicketDefectImage {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "qa_ticket_defect_location_id", nullable = false)
+    private QaTicketDefectLocation qaTicketDefectLocation;
+
+    private String imageUrl;
+
+    @CreationTimestamp private LocalDateTime uploadedAt;
+}
+```
+
+Enum:
+```java
+public enum InspectionStage { INLINE, ENDLINE, FINAL, INPUT }
+public enum TicketStatus { DRAFT, SUBMITTED }
+```
+
+Các entity danh mục (`Staff`, `Factory`, `Line`, `ProductionGroup`, `Customer`, `Style`, `GarmentType`, `GarmentLocation`, `Defect`, `PurchaseOrder`) chỉ là entity đơn giản, field khớp bảng ở mục 2, không cần nêu lại.
+
+---
+
+## 4. Ticket code tự sinh
+
+Dùng 1 sequence riêng, format khi trả về hoặc lưu sẵn dạng string:
+
+```java
+@Service
+public class TicketCodeGenerator {
+    public String generate(long nextSeq) {
+        return String.format("I%05d", nextSeq); // I00003
+    }
+}
+```
+Có thể dùng Postgres `SEQUENCE` (`qa_ticket_seq`) rồi lấy `nextval()` trước khi insert, hoặc dùng cột `id` của chính `QA_TICKET` (id=3 → "I00003") nếu không cần sequence riêng biệt.
+
+---
+
+## 5. API gợi ý
+
+```
+POST   /api/qa-tickets              -> tạo mới (nhận payload lồng nhau: ticket + defects + locations + images)
+PUT    /api/qa-tickets/{id}         -> cập nhật toàn bộ (dùng khi sửa phiếu draft)
+GET    /api/qa-tickets/{id}         -> xem chi tiết 1 phiếu
+GET    /api/qa-tickets              -> danh sách, filter theo factory/line/staff/status/date
+DELETE /api/qa-tickets/{id}         -> xóa (chỉ khi status = DRAFT)
+
+GET    /api/master/staff
+GET    /api/master/factories
+GET    /api/master/lines?factoryId=
+GET    /api/master/groups?lineId=
+GET    /api/master/customers
+GET    /api/master/garment-types
+GET    /api/master/garment-locations?garmentTypeId=
+GET    /api/master/defects
+GET    /api/purchase-orders?search=
+```
+
+DTO cho `POST /api/qa-tickets` nên là 1 object lồng nhau tương ứng đúng cây dữ liệu trên UI:
+```json
+{
+  "staffId": 5,
+  "factoryId": 1,
+  "lineId": 3,
+  "groupId": 7,
+  "inspectionStage": "INLINE",
+  "poId": 22,
+  "inspectedQty": 100,
+  "customerId": 2,
+  "garmentTypeId": 4,
+  "status": "SUBMITTED",
+  "defects": [
+    {
+      "defectId": 7,
+      "note": null,
+      "locations": [
+        {
+          "garmentLocationId": 12,
+          "locationText": "Cổ áo",
+          "quantity": 1,
+          "images": ["https://.../img1.jpg"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## 6. Lưu ý nghiệp vụ khi code
+
+- **Lưu draft**: khi FE tự động lưu nháp (khớp banner "Bạn có phiếu đang nhập dở"), gọi cùng API `POST/PUT /api/qa-tickets` với `status = DRAFT`. Nút "Khôi phục" trên FE chỉ là load lại bản draft đã lưu (không cần API riêng nếu FE tự lưu local trước, chỉ đồng bộ lên server khi cần).
+- **Cascade toàn bộ cây trong 1 transaction**: dùng `cascade = CascadeType.ALL, orphanRemoval = true` từ `QaTicket` xuống `QaTicketDefect` xuống `QaTicketDefectLocation` xuống `QaTicketDefectImage`, để khi xóa 1 defect hoặc 1 vị trí trên FE (nút "X") thì Hibernate tự xóa các dòng con liên quan (orphan removal), không cần code xóa tay.
+- **Ảnh**: `image_url` chỉ lưu đường dẫn, việc upload file thực tế nên tách API riêng (VD `POST /api/uploads`) trả về URL rồi mới gắn vào payload trên — tránh gửi file nhị phân lồng trong JSON của ticket.
+- **Validate**: `inspected_qty > 0`, tổng `quantity` trong các `QA_TICKET_DEFECT_LOCATION` của cùng 1 ticket không bắt buộc phải nhỏ hơn `inspected_qty` (1 lỗi có thể lặp ở nhiều điểm trên cùng 1 sản phẩm), nhưng có thể cảnh báo nếu vượt quá nhiều lần `inspected_qty`.

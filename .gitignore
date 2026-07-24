@@ -1,0 +1,14 @@
+target/
+.idea/
+*.iml
+.vscode/
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+HELP.md
+
+# local secrets - never commit real DB credentials / local config
+application.properties
+application-local.properties
+application-local.yml
+application-local.yaml
+.env
