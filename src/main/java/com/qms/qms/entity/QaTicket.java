@@ -10,8 +10,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "qa_ticket")
@@ -81,7 +81,7 @@ public class QaTicket {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "qaTicket", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<QaTicketDefect> defects = new ArrayList<>();
+    private Set<QaTicketDefect> defects = new LinkedHashSet<>();
 
     public void addDefect(QaTicketDefect defect) {
         defects.add(defect);

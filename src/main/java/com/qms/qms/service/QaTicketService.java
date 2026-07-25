@@ -90,6 +90,7 @@ public class QaTicketService {
                                                               Boolean exported, LocalDate dateFrom, LocalDate dateTo,
                                                               Long cursor, int size) {
         Specification<QaTicket> spec = Specification.allOf(
+                QaTicketSpecifications.withSummaryAssociations(),
                 QaTicketSpecifications.factoryId(factoryId),
                 QaTicketSpecifications.lineId(lineId),
                 QaTicketSpecifications.staffId(staffId),

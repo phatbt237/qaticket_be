@@ -2,6 +2,7 @@ package com.qms.qms.service;
 
 import com.qms.qms.entity.QaTicket;
 import com.qms.qms.entity.enums.TicketStatus;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
@@ -9,6 +10,19 @@ import java.time.LocalDate;
 public final class QaTicketSpecifications {
 
     private QaTicketSpecifications() {
+    }
+
+    /** Fetch-joins the *ToOne associations read by QaTicketSummaryResponse, avoiding N+1 on list(). */
+    public static Specification<QaTicket> withSummaryAssociations() {
+        return (root, query, cb) -> {
+            if (query.getResultType() != Long.class) {
+                root.fetch("staff", JoinType.LEFT);
+                root.fetch("factory", JoinType.LEFT);
+                root.fetch("line", JoinType.LEFT);
+                root.fetch("customer", JoinType.LEFT);
+            }
+            return cb.conjunction();
+        };
     }
 
     public static Specification<QaTicket> factoryId(Long factoryId) {
