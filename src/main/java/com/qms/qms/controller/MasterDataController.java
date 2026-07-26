@@ -21,6 +21,7 @@ public class MasterDataController {
     private final GarmentTypeRepository garmentTypeRepository;
     private final GarmentLocationRepository garmentLocationRepository;
     private final DefectRepository defectRepository;
+    private final DefectItemRepository defectItemRepository;
 
     public MasterDataController(StaffRepository staffRepository,
                                  FactoryRepository factoryRepository,
@@ -29,7 +30,8 @@ public class MasterDataController {
                                  CustomerRepository customerRepository,
                                  GarmentTypeRepository garmentTypeRepository,
                                  GarmentLocationRepository garmentLocationRepository,
-                                 DefectRepository defectRepository) {
+                                 DefectRepository defectRepository,
+                                 DefectItemRepository defectItemRepository) {
         this.staffRepository = staffRepository;
         this.factoryRepository = factoryRepository;
         this.lineRepository = lineRepository;
@@ -38,6 +40,7 @@ public class MasterDataController {
         this.garmentTypeRepository = garmentTypeRepository;
         this.garmentLocationRepository = garmentLocationRepository;
         this.defectRepository = defectRepository;
+        this.defectItemRepository = defectItemRepository;
     }
 
     @GetMapping("/staff")
@@ -83,5 +86,11 @@ public class MasterDataController {
     @GetMapping("/defects")
     public List<DefectResponse> defects() {
         return defectRepository.findAll().stream().map(DefectResponse::from).toList();
+    }
+
+    @GetMapping("/defect-items")
+    public List<DefectItemResponse> defectItems(@RequestParam(required = false) Long defectId) {
+        var items = defectId != null ? defectItemRepository.findByDefectId(defectId) : defectItemRepository.findAll();
+        return items.stream().map(DefectItemResponse::from).toList();
     }
 }

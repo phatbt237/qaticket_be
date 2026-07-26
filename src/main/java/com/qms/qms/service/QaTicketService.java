@@ -3,6 +3,7 @@ package com.qms.qms.service;
 import com.qms.qms.dto.CursorPageResponse;
 import com.qms.qms.dto.ticket.*;
 import com.qms.qms.entity.*;
+import com.qms.qms.entity.enums.Severity;
 import com.qms.qms.entity.enums.StaffRole;
 import com.qms.qms.entity.enums.TicketStatus;
 import com.qms.qms.exception.InvalidTicketStateException;
@@ -31,7 +32,7 @@ public class QaTicketService {
     private final CustomerRepository customerRepository;
     private final GarmentTypeRepository garmentTypeRepository;
     private final GarmentLocationRepository garmentLocationRepository;
-    private final DefectRepository defectRepository;
+    private final DefectItemRepository defectItemRepository;
     private final TicketCodeGenerator ticketCodeGenerator;
 
     public QaTicketService(QaTicketRepository qaTicketRepository,
@@ -43,7 +44,7 @@ public class QaTicketService {
                             CustomerRepository customerRepository,
                             GarmentTypeRepository garmentTypeRepository,
                             GarmentLocationRepository garmentLocationRepository,
-                            DefectRepository defectRepository,
+                            DefectItemRepository defectItemRepository,
                             TicketCodeGenerator ticketCodeGenerator) {
         this.qaTicketRepository = qaTicketRepository;
         this.staffRepository = staffRepository;
@@ -54,7 +55,7 @@ public class QaTicketService {
         this.customerRepository = customerRepository;
         this.garmentTypeRepository = garmentTypeRepository;
         this.garmentLocationRepository = garmentLocationRepository;
-        this.defectRepository = defectRepository;
+        this.defectItemRepository = defectItemRepository;
         this.ticketCodeGenerator = ticketCodeGenerator;
     }
 
@@ -168,7 +169,9 @@ public class QaTicketService {
         }
         for (QaTicketDefectRequest defectReq : request.defects()) {
             QaTicketDefect defect = new QaTicketDefect();
-            defect.setDefect(getRef(defectRepository, defectReq.defectId(), "Defect"));
+            DefectItem defectItem = getRef(defectItemRepository, defectReq.defectItemId(), "DefectItem");
+            defect.setDefectItem(defectItem);
+            defect.setSeverity(resolveSeverity(defectItem, defectReq.severity()));
             defect.setNote(defectReq.note());
             ticket.addDefect(defect);
 
@@ -192,6 +195,19 @@ public class QaTicketService {
                 }
             }
         }
+    }
+
+    private Severity resolveSeverity(DefectItem item, Severity requested) {
+        boolean allowMinor = item.isAllowMinor();
+        boolean allowMajor = item.isAllowMajor();
+        if (allowMinor != allowMajor) {
+            return allowMinor ? Severity.MINOR : Severity.MAJOR;
+        }
+        if (requested == null) {
+            throw new IllegalArgumentException(
+                    "Severity (minor or major) must be selected for defect item: " + item.getId());
+        }
+        return requested;
     }
 
     private <T, ID> T getRef(org.springframework.data.repository.CrudRepository<T, ID> repository, ID id, String entityName) {

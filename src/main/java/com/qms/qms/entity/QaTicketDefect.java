@@ -1,5 +1,6 @@
 package com.qms.qms.entity;
 
+import com.qms.qms.entity.enums.Severity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,8 +25,12 @@ public class QaTicketDefect {
     private QaTicket qaTicket;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "defect_id", nullable = false)
-    private Defect defect;
+    @JoinColumn(name = "defect_item_id", nullable = false)
+    private DefectItem defectItem;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Severity severity;
 
     @Column(length = 255)
     private String note;
