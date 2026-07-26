@@ -12,8 +12,8 @@ public interface QaTicketRepository extends JpaRepository<QaTicket, Long>, JpaSp
 
     @EntityGraph(attributePaths = {
             "staff", "factory", "line", "group", "purchaseOrder", "customer", "garmentType",
-            "defects", "defects.defect", "defects.locations", "defects.locations.garmentLocation",
-            "defects.locations.images"
+            "defects", "defects.defectItem", "defects.defectItem.defect", "defects.locations",
+            "defects.locations.garmentLocation", "defects.locations.images"
     })
     Optional<QaTicket> findWithDetailsById(Long id);
 
