@@ -3,6 +3,7 @@ package com.qms.qms.service;
 import com.qms.qms.dto.CursorPageResponse;
 import com.qms.qms.dto.ticket.*;
 import com.qms.qms.entity.*;
+import com.qms.qms.entity.enums.StaffRole;
 import com.qms.qms.entity.enums.TicketStatus;
 import com.qms.qms.exception.InvalidTicketStateException;
 import com.qms.qms.exception.ResourceNotFoundException;
@@ -79,21 +80,31 @@ public class QaTicketService {
     }
 
     @Transactional(readOnly = true)
-    public QaTicketResponse getById(Long id) {
+    public QaTicketResponse getById(Long id, Staff currentStaff) {
         QaTicket ticket = qaTicketRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("QA ticket not found: " + id));
+        // Non-admins can't view another staff's ticket by id; report it as not found rather than
+        // forbidden so we don't confirm the ticket's existence to someone who can't see it.
+        boolean isOwner = ticket.getStaff().getId().equals(currentStaff.getId());
+        if (currentStaff.getRole() != StaffRole.ADMIN && !isOwner) {
+            throw new ResourceNotFoundException("QA ticket not found: " + id);
+        }
         return QaTicketResponse.from(ticket);
     }
 
     @Transactional(readOnly = true)
     public CursorPageResponse<QaTicketSummaryResponse> list(Long factoryId, Long lineId, Long staffId, TicketStatus status,
                                                               Boolean exported, LocalDate dateFrom, LocalDate dateTo,
-                                                              Long cursor, int size) {
+                                                              Long cursor, int size, Staff currentStaff) {
+        // Non-admins are restricted to their own tickets regardless of the staffId they pass in,
+        // so QA_INSPECTOR/QA_LEAD can't view someone else's tickets by guessing their staffId.
+        Long effectiveStaffId = currentStaff.getRole() == StaffRole.ADMIN ? staffId : currentStaff.getId();
+
         Specification<QaTicket> spec = Specification.allOf(
                 QaTicketSpecifications.withSummaryAssociations(),
                 QaTicketSpecifications.factoryId(factoryId),
                 QaTicketSpecifications.lineId(lineId),
-                QaTicketSpecifications.staffId(staffId),
+                QaTicketSpecifications.staffId(effectiveStaffId),
                 QaTicketSpecifications.status(status),
                 QaTicketSpecifications.exported(exported),
                 QaTicketSpecifications.dateFrom(dateFrom),

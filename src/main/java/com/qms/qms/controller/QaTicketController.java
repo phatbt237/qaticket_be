@@ -5,12 +5,14 @@ import com.qms.qms.dto.ticket.QaTicketRequest;
 import com.qms.qms.dto.ticket.QaTicketResponse;
 import com.qms.qms.dto.ticket.QaTicketSummaryResponse;
 import com.qms.qms.entity.enums.TicketStatus;
+import com.qms.qms.security.StaffPrincipal;
 import com.qms.qms.service.QaTicketService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,8 +41,8 @@ public class QaTicketController {
     }
 
     @GetMapping("/{id}")
-    public QaTicketResponse getById(@PathVariable Long id) {
-        return qaTicketService.getById(id);
+    public QaTicketResponse getById(@PathVariable Long id, @AuthenticationPrincipal StaffPrincipal principal) {
+        return qaTicketService.getById(id, principal.getStaff());
     }
 
     /**
@@ -58,8 +60,10 @@ public class QaTicketController {
             @RequestParam(required = false) LocalDate dateFrom,
             @RequestParam(required = false) LocalDate dateTo,
             @RequestParam(required = false) Long cursor,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return qaTicketService.list(factoryId, lineId, staffId, status, exported, dateFrom, dateTo, cursor, size);
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @AuthenticationPrincipal StaffPrincipal principal) {
+        return qaTicketService.list(factoryId, lineId, staffId, status, exported, dateFrom, dateTo, cursor, size,
+                principal.getStaff());
     }
 
     @PatchMapping("/{id}/export")
