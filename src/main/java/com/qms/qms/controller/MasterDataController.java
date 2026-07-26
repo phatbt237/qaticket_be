@@ -2,6 +2,7 @@ package com.qms.qms.controller;
 
 import com.qms.qms.dto.master.*;
 import com.qms.qms.repository.*;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -70,11 +71,13 @@ public class MasterDataController {
         return customerRepository.findAll().stream().map(CustomerResponse::from).toList();
     }
 
+    @Cacheable("garmentTypes")
     @GetMapping("/garment-types")
     public List<GarmentTypeResponse> garmentTypes() {
         return garmentTypeRepository.findAll().stream().map(GarmentTypeResponse::from).toList();
     }
 
+    @Cacheable("garmentLocations")
     @GetMapping("/garment-locations")
     public List<GarmentLocationResponse> garmentLocations(@RequestParam(required = false) Long garmentTypeId) {
         var locations = garmentTypeId != null
@@ -88,6 +91,7 @@ public class MasterDataController {
         return defectRepository.findAll().stream().map(DefectResponse::from).toList();
     }
 
+    @Cacheable("defectItems")
     @GetMapping("/defect-items")
     public List<DefectItemResponse> defectItems(@RequestParam(required = false) Long defectId) {
         var items = defectId != null ? defectItemRepository.findByDefectId(defectId) : defectItemRepository.findAll();
