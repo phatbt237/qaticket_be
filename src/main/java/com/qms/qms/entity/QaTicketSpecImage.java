@@ -1,5 +1,6 @@
 package com.qms.qms.entity;
 
+import com.qms.qms.entity.enums.SpecImageType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,10 @@ public class QaTicketSpecImage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "qa_ticket_id", nullable = false)
     private QaTicket qaTicket;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private SpecImageType type;
 
     @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;

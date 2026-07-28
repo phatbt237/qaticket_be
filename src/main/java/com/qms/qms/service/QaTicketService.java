@@ -220,9 +220,10 @@ public class QaTicketService {
         if (request.specImages() == null) {
             return;
         }
-        for (String imageUrl : request.specImages()) {
+        for (QaTicketSpecImageRequest imgReq : request.specImages()) {
             QaTicketSpecImage image = new QaTicketSpecImage();
-            image.setImageUrl(imageUrl);
+            image.setType(imgReq.type());
+            image.setImageUrl(imgReq.imageUrl());
             ticket.addSpecImage(image);
         }
     }

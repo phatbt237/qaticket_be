@@ -29,6 +29,11 @@ Mọi lỗi (400/401/403/404/409/500...) đều trả về JSON dạng:
 - `TicketStatus`: `DRAFT` | `SUBMITTED`
 - `InspectionStage`: `INLINE` | `ENDLINE` | `FINAL` | `INPUT`
 - `StaffRole`: `QA_INSPECTOR` | `QA_LEAD` | `ADMIN`
+- `SpecImageType` (loại ảnh trong `specImages` của ticket):
+  - `APPROVED_SAMPLE` — Mẫu duyệt
+  - `SIZE_SPEC` — Bảng thông số kích thước
+  - `PACKING` — Quy cách đóng thùng/bao bì
+  - `HANGTAG_LABEL` — Thẻ treo & nhãn hiệu
 
 ---
 
@@ -136,7 +141,10 @@ Cả 2 dùng chung request body:
     }
   ],
   "specImages": [
-    "https://pub-xxxx.r2.dev/qa-ticket/....jpg"
+    { "type": "APPROVED_SAMPLE", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" },
+    { "type": "SIZE_SPEC", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" },
+    { "type": "PACKING", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" },
+    { "type": "HANGTAG_LABEL", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" }
   ]
 }
 ```
@@ -145,8 +153,11 @@ Field bắt buộc: `staffId`, `factoryId`, `lineId`, `inspectionStage`, `inspec
 `customerId`, `garmentTypeId`, `status`. `groupId`, `poId`, `styleId` optional (null nếu không chọn).
 Mỗi location bắt buộc `locationText`, `quantity` (>0); `garmentLocationId` optional (null nếu FE
 cho nhập tay vị trí không có trong danh mục); `images` là mảng string URL (lấy từ mục 2), optional.
-`specImages` là mảng string URL cấp ticket (lấy từ mục 2, upload chung endpoint), optional, không
-giới hạn số lượng.
+`specImages` là mảng object `{ type, imageUrl }` cấp ticket, optional, không giới hạn số lượng, cho
+phép nhiều ảnh cùng `type` (VD: nhiều ảnh Bảng thông số kích thước). Mỗi item **bắt buộc** cả
+`type` (1 trong 4 giá trị `SpecImageType`, xem mục Enum) lẫn `imageUrl` (lấy từ mục 2, upload
+chung endpoint) — thiếu 1 trong 2 sẽ bị `400`. FE nên chia UI thành 4 khu vực upload theo đúng
+4 `type` để người dùng chọn ảnh vào đúng mục, không cần tự gộp/tag lại phía client.
 
 **`styleId`** — style **suy ra mặc định từ PO đã chọn nhưng FE có thể ghi đè**: nếu request không
 gửi `styleId` (null/không có field), server tự lấy style của `poId`; nếu FE gửi `styleId` khác thì
@@ -203,10 +214,14 @@ Response `200`:
     }
   ],
   "specImages": [
-    { "id": 12, "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" }
+    { "id": 12, "type": "APPROVED_SAMPLE", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" },
+    { "id": 13, "type": "SIZE_SPEC", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" }
   ]
 }
 ```
+`specImages[].type` là 1 trong 4 giá trị `SpecImageType` — FE dùng để nhóm ảnh hiển thị lại đúng
+4 khu vực trên UI. Ảnh tạo trước khi có field `type` (dữ liệu cũ) sẽ có `type: null` — FE nên có
+khu vực "Khác"/fallback cho trường hợp này.
 `group`, `purchaseOrder`, `style` có thể `null`. `{ id, name }` (kiểu `RefResponse`) lặp lại cho mọi
 quan hệ tham chiếu (staff/factory/line/group/purchaseOrder/style/customer/garmentType/garmentLocation/defect) —
 `name` là tên hiển thị sẵn, FE không cần tự lookup thêm.
