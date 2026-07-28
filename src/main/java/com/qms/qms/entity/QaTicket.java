@@ -48,6 +48,10 @@ public class QaTicket {
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "style_id")
+    private Style style;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 

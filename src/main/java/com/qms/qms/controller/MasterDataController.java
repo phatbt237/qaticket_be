@@ -23,6 +23,7 @@ public class MasterDataController {
     private final GarmentLocationRepository garmentLocationRepository;
     private final DefectRepository defectRepository;
     private final DefectItemRepository defectItemRepository;
+    private final StyleRepository styleRepository;
 
     public MasterDataController(StaffRepository staffRepository,
                                  FactoryRepository factoryRepository,
@@ -32,7 +33,8 @@ public class MasterDataController {
                                  GarmentTypeRepository garmentTypeRepository,
                                  GarmentLocationRepository garmentLocationRepository,
                                  DefectRepository defectRepository,
-                                 DefectItemRepository defectItemRepository) {
+                                 DefectItemRepository defectItemRepository,
+                                 StyleRepository styleRepository) {
         this.staffRepository = staffRepository;
         this.factoryRepository = factoryRepository;
         this.lineRepository = lineRepository;
@@ -42,6 +44,7 @@ public class MasterDataController {
         this.garmentLocationRepository = garmentLocationRepository;
         this.defectRepository = defectRepository;
         this.defectItemRepository = defectItemRepository;
+        this.styleRepository = styleRepository;
     }
 
     @Cacheable("staff")
@@ -102,5 +105,11 @@ public class MasterDataController {
     public List<DefectItemResponse> defectItems(@RequestParam(required = false) Long defectId) {
         var items = defectId != null ? defectItemRepository.findByDefectId(defectId) : defectItemRepository.findAll();
         return items.stream().map(DefectItemResponse::from).toList();
+    }
+
+    @Cacheable("styles")
+    @GetMapping("/styles")
+    public List<StyleResponse> styles() {
+        return styleRepository.findAll().stream().map(StyleResponse::from).toList();
     }
 }

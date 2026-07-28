@@ -29,6 +29,7 @@ public class QaTicketService {
     private final LineRepository lineRepository;
     private final ProductionGroupRepository productionGroupRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final StyleRepository styleRepository;
     private final CustomerRepository customerRepository;
     private final GarmentTypeRepository garmentTypeRepository;
     private final GarmentLocationRepository garmentLocationRepository;
@@ -41,6 +42,7 @@ public class QaTicketService {
                             LineRepository lineRepository,
                             ProductionGroupRepository productionGroupRepository,
                             PurchaseOrderRepository purchaseOrderRepository,
+                            StyleRepository styleRepository,
                             CustomerRepository customerRepository,
                             GarmentTypeRepository garmentTypeRepository,
                             GarmentLocationRepository garmentLocationRepository,
@@ -52,6 +54,7 @@ public class QaTicketService {
         this.lineRepository = lineRepository;
         this.productionGroupRepository = productionGroupRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
+        this.styleRepository = styleRepository;
         this.customerRepository = customerRepository;
         this.garmentTypeRepository = garmentTypeRepository;
         this.garmentLocationRepository = garmentLocationRepository;
@@ -157,11 +160,24 @@ public class QaTicketService {
         ticket.setLine(getRef(lineRepository, request.lineId(), "Line"));
         ticket.setGroup(request.groupId() != null ? getRef(productionGroupRepository, request.groupId(), "ProductionGroup") : null);
         ticket.setPurchaseOrder(request.poId() != null ? getRef(purchaseOrderRepository, request.poId(), "PurchaseOrder") : null);
+        ticket.setStyle(resolveStyle(ticket, request));
         ticket.setCustomer(getRef(customerRepository, request.customerId(), "Customer"));
         ticket.setGarmentType(getRef(garmentTypeRepository, request.garmentTypeId(), "GarmentType"));
         ticket.setInspectionStage(request.inspectionStage());
         ticket.setInspectedQty(request.inspectedQty());
         ticket.setStatus(request.status());
+    }
+
+    /**
+     * Style is independently selectable but defaults to the chosen PO's style: an explicit
+     * styleId always wins, otherwise fall back to purchaseOrder.style so tickets without an
+     * override still carry the style implied by their PO.
+     */
+    private Style resolveStyle(QaTicket ticket, QaTicketRequest request) {
+        if (request.styleId() != null) {
+            return getRef(styleRepository, request.styleId(), "Style");
+        }
+        return ticket.getPurchaseOrder() != null ? ticket.getPurchaseOrder().getStyle() : null;
     }
 
     private void rebuildDefects(QaTicket ticket, QaTicketRequest request) {

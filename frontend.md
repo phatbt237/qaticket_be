@@ -114,6 +114,7 @@ Cả 2 dùng chung request body:
   "groupId": 1,
   "inspectionStage": "INLINE",
   "poId": 1,
+  "styleId": 1,
   "inspectedQty": 120,
   "customerId": 1,
   "garmentTypeId": 1,
@@ -141,11 +142,18 @@ Cả 2 dùng chung request body:
 ```
 
 Field bắt buộc: `staffId`, `factoryId`, `lineId`, `inspectionStage`, `inspectedQty` (>0),
-`customerId`, `garmentTypeId`, `status`. `groupId`, `poId` optional (null nếu không chọn).
+`customerId`, `garmentTypeId`, `status`. `groupId`, `poId`, `styleId` optional (null nếu không chọn).
 Mỗi location bắt buộc `locationText`, `quantity` (>0); `garmentLocationId` optional (null nếu FE
 cho nhập tay vị trí không có trong danh mục); `images` là mảng string URL (lấy từ mục 2), optional.
 `specImages` là mảng string URL cấp ticket (lấy từ mục 2, upload chung endpoint), optional, không
 giới hạn số lượng.
+
+**`styleId`** — style **suy ra mặc định từ PO đã chọn nhưng FE có thể ghi đè**: nếu request không
+gửi `styleId` (null/không có field), server tự lấy style của `poId`; nếu FE gửi `styleId` khác thì
+server lưu đúng giá trị đó (ticket có thể có style khác PO). Flow gợi ý cho form: khi user chọn PO
+→ FE tự điền `styleId` = `style.id` lấy từ item PO đã chọn (mục 5) vào field Style trên form (cho
+sửa được) → nếu user không đổi gì thì gửi nguyên giá trị đó lên, nếu đổi thì gửi `styleId` mới.
+Danh sách style đầy đủ để làm dropdown đổi style: `GET /api/master/styles` (mục 4).
 
 ⚠️ **PUT thay thế toàn bộ cây con** (defects/locations/images/specImages cũ bị xoá sạch rồi dựng
 lại từ payload mới — orphan removal). Khi sửa ticket, FE phải GET chi tiết trước, giữ nguyên các
@@ -202,9 +210,9 @@ Response `200`:
 `group`, `purchaseOrder`, `style` có thể `null`. `{ id, name }` (kiểu `RefResponse`) lặp lại cho mọi
 quan hệ tham chiếu (staff/factory/line/group/purchaseOrder/style/customer/garmentType/garmentLocation/defect) —
 `name` là tên hiển thị sẵn, FE không cần tự lookup thêm.
-`style` được suy ra tự động từ `purchaseOrder` đã chọn (mỗi PO gắn với đúng 1 style) — **FE không
-gửi `styleId` khi tạo/sửa ticket**, chỉ gửi `poId`; server tự điền `style` vào response. Nếu ticket
-không gắn PO thì `style` cũng là `null`.
+`style` mặc định lấy theo `purchaseOrder` đã chọn nhưng **có thể khác PO** nếu FE gửi `styleId`
+riêng khi tạo/sửa (xem field `styleId` ở mục POST/PUT bên trên). Nếu ticket không có PO và cũng
+không chọn style thì `style` là `null`.
 Ticket không tồn tại → `404`.
 
 ### GET `/api/qa-tickets` — danh sách, phân trang kiểu cursor
@@ -274,6 +282,7 @@ nhau khi cascade dropdown) mà không lo tốn round-trip DB.
 | `/api/master/garment-types` | — | `{ id, name }` |
 | `/api/master/garment-locations` | `garmentTypeId` (optional, lọc theo loại hàng) | `{ id, garmentTypeId, name }` |
 | `/api/master/defects` | — | `{ id, code, nameEn, nameVi }` |
+| `/api/master/styles` | — | `{ id, code, name }` |
 
 **Dropdown phụ thuộc (cascade)**: khi tạo ticket, FE nên gọi `lines?factoryId=` sau khi chọn nhà
 máy, `groups?lineId=` sau khi chọn chuyền, `garment-locations?garmentTypeId=` sau khi chọn loại
@@ -330,10 +339,11 @@ flowchart TD
     B --> C[Chọn Nhà máy] --> D[GET /api/master/lines?factoryId= ]
     D --> E[Chọn Chuyền] --> F[GET /api/master/groups?lineId= optional]
     E --> G[Tìm PO: GET /api/purchase-orders?search= optional]
+    G --> G2[Chọn PO -> tự điền styleId từ style của PO, cho sửa lại nếu cần khác PO]
     B --> H[Chọn Loại hàng] --> I[GET /api/master/garment-locations?garmentTypeId= ]
     F --> J[Nhập số lượng kiểm, chọn công đoạn InspectionStage]
     I --> J
-    G --> J
+    G2 --> J
     J --> K[Thêm từng Defect: chọn defect từ /api/master/defects, nhập note]
     K --> L[Mỗi Defect thêm Location: chọn garmentLocation, nhập quantity]
     L --> M[Mỗi Location: chọn ảnh từ máy]

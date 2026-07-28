@@ -16,6 +16,7 @@ public record QaTicketRequest(
         Long groupId,
         @NotNull InspectionStage inspectionStage,
         Long poId,
+        Long styleId,
         @NotNull @Min(1) Integer inspectedQty,
         @NotNull Long customerId,
         @NotNull Long garmentTypeId,

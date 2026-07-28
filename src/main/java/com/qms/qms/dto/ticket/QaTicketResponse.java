@@ -38,9 +38,7 @@ public record QaTicketResponse(
                 new RefResponse(t.getLine().getId(), t.getLine().getName()),
                 t.getGroup() != null ? new RefResponse(t.getGroup().getId(), t.getGroup().getName()) : null,
                 t.getPurchaseOrder() != null ? new RefResponse(t.getPurchaseOrder().getId(), t.getPurchaseOrder().getPoCode()) : null,
-                t.getPurchaseOrder() != null && t.getPurchaseOrder().getStyle() != null
-                        ? new RefResponse(t.getPurchaseOrder().getStyle().getId(), t.getPurchaseOrder().getStyle().getCode())
-                        : null,
+                t.getStyle() != null ? new RefResponse(t.getStyle().getId(), t.getStyle().getCode()) : null,
                 new RefResponse(t.getCustomer().getId(), t.getCustomer().getName()),
                 new RefResponse(t.getGarmentType().getId(), t.getGarmentType().getName()),
                 t.getInspectionStage(),
