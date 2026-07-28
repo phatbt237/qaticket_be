@@ -1,6 +1,7 @@
 package com.qms.qms.dto.po;
 
 import com.qms.qms.entity.PurchaseOrder;
+import com.qms.qms.entity.Style;
 
 import java.time.LocalDate;
 
@@ -8,6 +9,7 @@ public record PurchaseOrderResponse(
         Long id,
         Long styleId,
         String styleCode,
+        String styleName,
         Long customerId,
         String customerName,
         String poCode,
@@ -16,10 +18,12 @@ public record PurchaseOrderResponse(
         LocalDate dateShipment
 ) {
     public static PurchaseOrderResponse from(PurchaseOrder po) {
+        Style style = po.getStyle();
         return new PurchaseOrderResponse(
                 po.getId(),
-                po.getStyle() != null ? po.getStyle().getId() : null,
-                po.getStyle() != null ? po.getStyle().getCode() : null,
+                style != null ? style.getId() : null,
+                style != null ? style.getCode() : null,
+                style != null ? style.getName() : null,
                 po.getCustomer().getId(),
                 po.getCustomer().getName(),
                 po.getPoCode(),

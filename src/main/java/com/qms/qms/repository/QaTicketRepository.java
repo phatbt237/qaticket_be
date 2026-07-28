@@ -11,9 +11,9 @@ import java.util.Optional;
 public interface QaTicketRepository extends JpaRepository<QaTicket, Long>, JpaSpecificationExecutor<QaTicket> {
 
     @EntityGraph(attributePaths = {
-            "staff", "factory", "line", "group", "purchaseOrder", "customer", "garmentType",
+            "staff", "factory", "line", "group", "purchaseOrder", "purchaseOrder.style", "customer", "garmentType",
             "defects", "defects.defectItem", "defects.defectItem.defect", "defects.locations",
-            "defects.locations.garmentLocation", "defects.locations.images"
+            "defects.locations.garmentLocation", "defects.locations.images", "specImages"
     })
     Optional<QaTicket> findWithDetailsById(Long id);
 

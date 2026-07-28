@@ -16,6 +16,7 @@ public record QaTicketResponse(
         RefResponse line,
         RefResponse group,
         RefResponse purchaseOrder,
+        RefResponse style,
         RefResponse customer,
         RefResponse garmentType,
         InspectionStage inspectionStage,
@@ -25,7 +26,8 @@ public record QaTicketResponse(
         LocalDateTime exportedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<QaTicketDefectResponse> defects
+        List<QaTicketDefectResponse> defects,
+        List<QaTicketSpecImageResponse> specImages
 ) {
     public static QaTicketResponse from(QaTicket t) {
         return new QaTicketResponse(
@@ -36,6 +38,9 @@ public record QaTicketResponse(
                 new RefResponse(t.getLine().getId(), t.getLine().getName()),
                 t.getGroup() != null ? new RefResponse(t.getGroup().getId(), t.getGroup().getName()) : null,
                 t.getPurchaseOrder() != null ? new RefResponse(t.getPurchaseOrder().getId(), t.getPurchaseOrder().getPoCode()) : null,
+                t.getPurchaseOrder() != null && t.getPurchaseOrder().getStyle() != null
+                        ? new RefResponse(t.getPurchaseOrder().getStyle().getId(), t.getPurchaseOrder().getStyle().getCode())
+                        : null,
                 new RefResponse(t.getCustomer().getId(), t.getCustomer().getName()),
                 new RefResponse(t.getGarmentType().getId(), t.getGarmentType().getName()),
                 t.getInspectionStage(),
@@ -45,7 +50,8 @@ public record QaTicketResponse(
                 t.getExportedAt(),
                 t.getCreatedAt(),
                 t.getUpdatedAt(),
-                t.getDefects().stream().map(QaTicketDefectResponse::from).toList()
+                t.getDefects().stream().map(QaTicketDefectResponse::from).toList(),
+                t.getSpecImages().stream().map(QaTicketSpecImageResponse::from).toList()
         );
     }
 }

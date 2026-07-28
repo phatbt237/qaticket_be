@@ -64,6 +64,7 @@ public class QaTicketService {
         ticket.setTicketCode(ticketCodeGenerator.generate(qaTicketRepository.nextTicketSequence()));
         applyScalarFields(ticket, request);
         rebuildDefects(ticket, request);
+        rebuildSpecImages(ticket, request);
 
         QaTicket saved = qaTicketRepository.save(ticket);
         return QaTicketResponse.from(saved);
@@ -75,6 +76,7 @@ public class QaTicketService {
 
         applyScalarFields(ticket, request);
         rebuildDefects(ticket, request);
+        rebuildSpecImages(ticket, request);
 
         QaTicket saved = qaTicketRepository.save(ticket);
         return QaTicketResponse.from(saved);
@@ -194,6 +196,18 @@ public class QaTicketService {
                     }
                 }
             }
+        }
+    }
+
+    private void rebuildSpecImages(QaTicket ticket, QaTicketRequest request) {
+        ticket.getSpecImages().clear();
+        if (request.specImages() == null) {
+            return;
+        }
+        for (String imageUrl : request.specImages()) {
+            QaTicketSpecImage image = new QaTicketSpecImage();
+            image.setImageUrl(imageUrl);
+            ticket.addSpecImage(image);
         }
     }
 

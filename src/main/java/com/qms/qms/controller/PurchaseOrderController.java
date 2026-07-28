@@ -2,6 +2,7 @@ package com.qms.qms.controller;
 
 import com.qms.qms.dto.po.PurchaseOrderResponse;
 import com.qms.qms.repository.PurchaseOrderRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +20,7 @@ public class PurchaseOrderController {
         this.purchaseOrderRepository = purchaseOrderRepository;
     }
 
+    @Cacheable("purchaseOrders")
     @GetMapping
     public List<PurchaseOrderResponse> search(@RequestParam(required = false) String search) {
         var orders = (search == null || search.isBlank())
