@@ -159,6 +159,11 @@ phép nhiều ảnh cùng `type` (VD: nhiều ảnh Bảng thông số kích th�
 chung endpoint) — thiếu 1 trong 2 sẽ bị `400`. FE nên chia UI thành 4 khu vực upload theo đúng
 4 `type` để người dùng chọn ảnh vào đúng mục, không cần tự gộp/tag lại phía client.
 
+⚠️ **`specImages` chỉ được truyền khi `inspectionStage = "FINAL"`.** Nếu `inspectionStage` khác
+`FINAL` mà request có `specImages` (mảng không rỗng) → `400`. FE chỉ hiện khu vực upload 4 loại
+ảnh spec trên form khi user chọn công đoạn `FINAL`; các công đoạn khác (`INLINE`/`ENDLINE`/`INPUT`)
+ẩn hẳn phần này và không gửi field `specImages` lên (hoặc gửi `null`/mảng rỗng).
+
 **`styleId`** — style **suy ra mặc định từ PO đã chọn nhưng FE có thể ghi đè**: nếu request không
 gửi `styleId` (null/không có field), server tự lấy style của `poId`; nếu FE gửi `styleId` khác thì
 server lưu đúng giá trị đó (ticket có thể có style khác PO). Flow gợi ý cho form: khi user chọn PO
@@ -364,7 +369,11 @@ flowchart TD
     L --> M[Mỗi Location: chọn ảnh từ máy]
     M --> N[POST /api/uploads/images multipart nhiều ảnh 1 lần]
     N --> O[Nhận mảng URL, gán vào location.images]
-    O --> P{Lưu nháp hay Nộp?}
+    O --> P2{inspectionStage = FINAL?}
+    P2 -- Có --> P3[Hiện 4 khu vực upload specImages: mẫu duyệt/thông số/đóng gói/thẻ treo]
+    P3 --> P4[POST /api/uploads/images, gán vào specImages theo đúng type]
+    P2 -- Không --> P{Lưu nháp hay Nộp?}
+    P4 --> P
     P -- Nháp --> Q[status = DRAFT]
     P -- Nộp --> R[status = SUBMITTED]
     Q --> S[POST /api/qa-tickets với toàn bộ payload]

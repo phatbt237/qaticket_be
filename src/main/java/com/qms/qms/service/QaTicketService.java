@@ -3,6 +3,7 @@ package com.qms.qms.service;
 import com.qms.qms.dto.CursorPageResponse;
 import com.qms.qms.dto.ticket.*;
 import com.qms.qms.entity.*;
+import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.Severity;
 import com.qms.qms.entity.enums.StaffRole;
 import com.qms.qms.entity.enums.TicketStatus;
@@ -217,8 +218,12 @@ public class QaTicketService {
 
     private void rebuildSpecImages(QaTicket ticket, QaTicketRequest request) {
         ticket.getSpecImages().clear();
-        if (request.specImages() == null) {
+        if (request.specImages() == null || request.specImages().isEmpty()) {
             return;
+        }
+        if (request.inspectionStage() != InspectionStage.FINAL) {
+            throw new IllegalArgumentException(
+                    "specImages is only allowed when inspectionStage is FINAL, got: " + request.inspectionStage());
         }
         for (QaTicketSpecImageRequest imgReq : request.specImages()) {
             QaTicketSpecImage image = new QaTicketSpecImage();
