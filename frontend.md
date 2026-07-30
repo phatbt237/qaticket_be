@@ -242,7 +242,7 @@ Query params (tất cả optional trừ không có gì bắt buộc):
 | Param | Kiểu | Ghi chú |
 |---|---|---|
 | `factoryId` | Long | lọc theo nhà máy |
-| `lineId` | Long | lọc theo chuyền |
+| `customerId` | Long | lọc theo khách hàng |
 | `staffId` | Long | lọc theo nhân viên |
 | `status` | `DRAFT`\|`SUBMITTED` | lọc theo trạng thái |
 | `exported` | `true`\|`false` | lọc ticket đã/chưa xuất file |

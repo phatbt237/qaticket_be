@@ -107,7 +107,7 @@ public class QaTicketService {
     }
 
     @Transactional(readOnly = true)
-    public CursorPageResponse<QaTicketSummaryResponse> list(Long factoryId, Long lineId, Long staffId, TicketStatus status,
+    public CursorPageResponse<QaTicketSummaryResponse> list(Long factoryId, Long customerId, Long staffId, TicketStatus status,
                                                               Boolean exported, LocalDate dateFrom, LocalDate dateTo,
                                                               Long cursor, int size, Staff currentStaff) {
         // Non-admins are restricted to their own tickets regardless of the staffId they pass in,
@@ -117,7 +117,7 @@ public class QaTicketService {
         Specification<QaTicket> spec = Specification.allOf(
                 QaTicketSpecifications.withSummaryAssociations(),
                 QaTicketSpecifications.factoryId(factoryId),
-                QaTicketSpecifications.lineId(lineId),
+                QaTicketSpecifications.customerId(customerId),
                 QaTicketSpecifications.staffId(effectiveStaffId),
                 QaTicketSpecifications.status(status),
                 QaTicketSpecifications.exported(exported),

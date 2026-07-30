@@ -53,7 +53,7 @@ public class QaTicketController {
     @GetMapping
     public CursorPageResponse<QaTicketSummaryResponse> list(
             @RequestParam(required = false) Long factoryId,
-            @RequestParam(required = false) Long lineId,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long staffId,
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) Boolean exported,
@@ -62,7 +62,7 @@ public class QaTicketController {
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @AuthenticationPrincipal StaffPrincipal principal) {
-        return qaTicketService.list(factoryId, lineId, staffId, status, exported, dateFrom, dateTo, cursor, size,
+        return qaTicketService.list(factoryId, customerId, staffId, status, exported, dateFrom, dateTo, cursor, size,
                 principal.getStaff());
     }
 

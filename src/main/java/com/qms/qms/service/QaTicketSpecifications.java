@@ -29,8 +29,8 @@ public final class QaTicketSpecifications {
         return (root, query, cb) -> factoryId == null ? null : cb.equal(root.get("factory").get("id"), factoryId);
     }
 
-    public static Specification<QaTicket> lineId(Long lineId) {
-        return (root, query, cb) -> lineId == null ? null : cb.equal(root.get("line").get("id"), lineId);
+    public static Specification<QaTicket> customerId(Long customerId) {
+        return (root, query, cb) -> customerId == null ? null : cb.equal(root.get("customer").get("id"), customerId);
     }
 
     public static Specification<QaTicket> staffId(Long staffId) {
