@@ -1,5 +1,6 @@
 package com.qms.qms.dto.ticket;
 
+import com.qms.qms.entity.enums.AqlLevel;
 import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.TicketStatus;
 import jakarta.validation.Valid;
@@ -20,6 +21,10 @@ public record QaTicketRequest(
         @NotNull Long customerId,
         @NotNull Long garmentTypeId,
         @NotNull TicketStatus status,
+        AqlLevel aqlLevel,
+        @Min(1) Integer qtySize,
+        @Min(0) Integer actualMajorDefects,
+        @Min(0) Integer actualMinorDefects,
         @Valid List<QaTicketDefectRequest> defects,
         @Valid List<QaTicketSpecImageRequest> specImages
 ) {

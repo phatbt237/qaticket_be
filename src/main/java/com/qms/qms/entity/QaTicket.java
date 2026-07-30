@@ -1,5 +1,8 @@
 package com.qms.qms.entity;
 
+import com.qms.qms.entity.enums.AqlLevel;
+import com.qms.qms.entity.enums.AqlLevelConverter;
+import com.qms.qms.entity.enums.InspectionResult;
 import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.TicketStatus;
 import jakarta.persistence.*;
@@ -75,6 +78,27 @@ public class QaTicket {
 
     @Column(name = "exported_at")
     private LocalDateTime exportedAt;
+
+    // AQL sampling plan fields, only populated when inspectionStage is FINAL.
+    @Convert(converter = AqlLevelConverter.class)
+    @Column(name = "aql_level", length = 10)
+    private AqlLevel aqlLevel;
+
+    @Column(name = "qty_size")
+    private Integer qtySize;
+
+    @Column(name = "sampling_size")
+    private Integer samplingSize;
+
+    @Column(name = "actual_major_defects")
+    private Integer actualMajorDefects;
+
+    @Column(name = "actual_minor_defects")
+    private Integer actualMinorDefects;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "inspection_result", length = 20)
+    private InspectionResult inspectionResult;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

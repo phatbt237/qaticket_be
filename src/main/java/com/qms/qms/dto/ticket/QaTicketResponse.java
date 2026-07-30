@@ -2,6 +2,8 @@ package com.qms.qms.dto.ticket;
 
 import com.qms.qms.dto.RefResponse;
 import com.qms.qms.entity.QaTicket;
+import com.qms.qms.entity.enums.AqlLevel;
+import com.qms.qms.entity.enums.InspectionResult;
 import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.TicketStatus;
 
@@ -24,6 +26,12 @@ public record QaTicketResponse(
         TicketStatus status,
         boolean exported,
         LocalDateTime exportedAt,
+        AqlLevel aqlLevel,
+        Integer qtySize,
+        Integer samplingSize,
+        Integer actualMajorDefects,
+        Integer actualMinorDefects,
+        InspectionResult inspectionResult,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<QaTicketDefectResponse> defects,
@@ -46,6 +54,12 @@ public record QaTicketResponse(
                 t.getStatus(),
                 t.isExported(),
                 t.getExportedAt(),
+                t.getAqlLevel(),
+                t.getQtySize(),
+                t.getSamplingSize(),
+                t.getActualMajorDefects(),
+                t.getActualMinorDefects(),
+                t.getInspectionResult(),
                 t.getCreatedAt(),
                 t.getUpdatedAt(),
                 t.getDefects().stream().map(QaTicketDefectResponse::from).toList(),

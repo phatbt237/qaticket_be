@@ -3,6 +3,8 @@ package com.qms.qms.service;
 import com.qms.qms.dto.CursorPageResponse;
 import com.qms.qms.dto.ticket.*;
 import com.qms.qms.entity.*;
+import com.qms.qms.entity.enums.AqlLevel;
+import com.qms.qms.entity.enums.InspectionResult;
 import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.Severity;
 import com.qms.qms.entity.enums.StaffRole;
@@ -36,6 +38,7 @@ public class QaTicketService {
     private final GarmentLocationRepository garmentLocationRepository;
     private final DefectItemRepository defectItemRepository;
     private final TicketCodeGenerator ticketCodeGenerator;
+    private final AqlSamplingService aqlSamplingService;
 
     public QaTicketService(QaTicketRepository qaTicketRepository,
                             StaffRepository staffRepository,
@@ -48,7 +51,8 @@ public class QaTicketService {
                             GarmentTypeRepository garmentTypeRepository,
                             GarmentLocationRepository garmentLocationRepository,
                             DefectItemRepository defectItemRepository,
-                            TicketCodeGenerator ticketCodeGenerator) {
+                            TicketCodeGenerator ticketCodeGenerator,
+                            AqlSamplingService aqlSamplingService) {
         this.qaTicketRepository = qaTicketRepository;
         this.staffRepository = staffRepository;
         this.factoryRepository = factoryRepository;
@@ -61,12 +65,14 @@ public class QaTicketService {
         this.garmentLocationRepository = garmentLocationRepository;
         this.defectItemRepository = defectItemRepository;
         this.ticketCodeGenerator = ticketCodeGenerator;
+        this.aqlSamplingService = aqlSamplingService;
     }
 
     public QaTicketResponse create(QaTicketRequest request) {
         QaTicket ticket = new QaTicket();
         ticket.setTicketCode(ticketCodeGenerator.generate(qaTicketRepository.nextTicketSequence()));
         applyScalarFields(ticket, request);
+        applyAqlSampling(ticket, request);
         rebuildDefects(ticket, request);
         rebuildSpecImages(ticket, request);
 
@@ -79,6 +85,7 @@ public class QaTicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("QA ticket not found: " + id));
 
         applyScalarFields(ticket, request);
+        applyAqlSampling(ticket, request);
         rebuildDefects(ticket, request);
         rebuildSpecImages(ticket, request);
 
@@ -230,6 +237,47 @@ public class QaTicketService {
             image.setType(imgReq.type());
             image.setImageUrl(imgReq.imageUrl());
             ticket.addSpecImage(image);
+        }
+    }
+
+    /**
+     * AQL sampling (aqlLevel/qtySize/actual defect counts) is only meaningful once inspection
+     * reaches FINAL stage, mirroring the existing specImages-only-on-FINAL rule above.
+     */
+    private void applyAqlSampling(QaTicket ticket, QaTicketRequest request) {
+        boolean anyAqlFieldSet = request.aqlLevel() != null || request.qtySize() != null
+                || request.actualMajorDefects() != null || request.actualMinorDefects() != null;
+        if (!anyAqlFieldSet) {
+            ticket.setAqlLevel(null);
+            ticket.setQtySize(null);
+            ticket.setSamplingSize(null);
+            ticket.setActualMajorDefects(null);
+            ticket.setActualMinorDefects(null);
+            ticket.setInspectionResult(null);
+            return;
+        }
+        if (request.inspectionStage() != InspectionStage.FINAL) {
+            throw new IllegalArgumentException(
+                    "aqlLevel/qtySize/actualMajorDefects/actualMinorDefects are only allowed when inspectionStage is FINAL, got: "
+                            + request.inspectionStage());
+        }
+        if (request.aqlLevel() == null || request.qtySize() == null) {
+            throw new IllegalArgumentException("aqlLevel and qtySize must be provided together");
+        }
+
+        AqlSamplingPlan plan = aqlSamplingService.lookup(request.aqlLevel(), request.qtySize());
+        ticket.setAqlLevel(request.aqlLevel());
+        ticket.setQtySize(request.qtySize());
+        ticket.setSamplingSize(plan.getSamplingSize());
+        ticket.setActualMajorDefects(request.actualMajorDefects());
+        ticket.setActualMinorDefects(request.actualMinorDefects());
+
+        if (request.actualMajorDefects() != null && request.actualMinorDefects() != null) {
+            InspectionResult result = aqlSamplingService.evaluateResult(
+                    plan, request.actualMajorDefects(), request.actualMinorDefects());
+            ticket.setInspectionResult(result);
+        } else {
+            ticket.setInspectionResult(null);
         }
     }
 
