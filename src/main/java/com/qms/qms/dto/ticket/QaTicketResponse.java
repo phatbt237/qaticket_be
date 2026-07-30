@@ -35,7 +35,8 @@ public record QaTicketResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<QaTicketDefectResponse> defects,
-        List<QaTicketSpecImageResponse> specImages
+        List<QaTicketSpecImageResponse> specImages,
+        List<QaTicketMeasurementImageResponse> measurementImages
 ) {
     public static QaTicketResponse from(QaTicket t) {
         return new QaTicketResponse(
@@ -63,7 +64,8 @@ public record QaTicketResponse(
                 t.getCreatedAt(),
                 t.getUpdatedAt(),
                 t.getDefects().stream().map(QaTicketDefectResponse::from).toList(),
-                t.getSpecImages().stream().map(QaTicketSpecImageResponse::from).toList()
+                t.getSpecImages().stream().map(QaTicketSpecImageResponse::from).toList(),
+                t.getMeasurementImages().stream().map(QaTicketMeasurementImageResponse::from).toList()
         );
     }
 }

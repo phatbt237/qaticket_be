@@ -75,6 +75,7 @@ public class QaTicketService {
         applyAqlSampling(ticket, request);
         rebuildDefects(ticket, request);
         rebuildSpecImages(ticket, request);
+        rebuildMeasurementImages(ticket, request);
 
         QaTicket saved = qaTicketRepository.save(ticket);
         return QaTicketResponse.from(saved);
@@ -88,6 +89,7 @@ public class QaTicketService {
         applyAqlSampling(ticket, request);
         rebuildDefects(ticket, request);
         rebuildSpecImages(ticket, request);
+        rebuildMeasurementImages(ticket, request);
 
         QaTicket saved = qaTicketRepository.save(ticket);
         return QaTicketResponse.from(saved);
@@ -237,6 +239,18 @@ public class QaTicketService {
             image.setType(imgReq.type());
             image.setImageUrl(imgReq.imageUrl());
             ticket.addSpecImage(image);
+        }
+    }
+
+    private void rebuildMeasurementImages(QaTicket ticket, QaTicketRequest request) {
+        ticket.getMeasurementImages().clear();
+        if (request.measurementImages() == null) {
+            return;
+        }
+        for (QaTicketMeasurementImageRequest imgReq : request.measurementImages()) {
+            QaTicketMeasurementImage image = new QaTicketMeasurementImage();
+            image.setImageUrl(imgReq.imageUrl());
+            ticket.addMeasurementImage(image);
         }
     }
 

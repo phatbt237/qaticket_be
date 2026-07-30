@@ -114,6 +114,9 @@ public class QaTicket {
     @OneToMany(mappedBy = "qaTicket", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<QaTicketSpecImage> specImages = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "qaTicket", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<QaTicketMeasurementImage> measurementImages = new LinkedHashSet<>();
+
     public void addDefect(QaTicketDefect defect) {
         defects.add(defect);
         defect.setQaTicket(this);
@@ -121,6 +124,11 @@ public class QaTicket {
 
     public void addSpecImage(QaTicketSpecImage image) {
         specImages.add(image);
+        image.setQaTicket(this);
+    }
+
+    public void addMeasurementImage(QaTicketMeasurementImage image) {
+        measurementImages.add(image);
         image.setQaTicket(this);
     }
 }

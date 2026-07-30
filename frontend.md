@@ -103,8 +103,10 @@ Các URL này dùng trực tiếp vào field `images` khi tạo/sửa QA ticket 
 ## 3. QA Ticket
 
 Cấu trúc lồng nhau: **Ticket → nhiều Defect → mỗi Defect nhiều Location → mỗi Location nhiều Image**.
-Ngoài ra ticket còn có `specImages`: ảnh thông số/spec gắn thẳng vào ticket (không thuộc defect
-nào), optional, nhiều ảnh.
+Ngoài ra ticket còn có 2 nhóm ảnh cấp ticket riêng biệt (không thuộc defect nào), đều optional,
+nhiều ảnh:
+- `specImages`: ảnh spec tham chiếu, phân theo 4 `type`, chỉ dùng khi `inspectionStage = FINAL`.
+- `measurementImages`: ảnh thông số/đo đạc, không phân loại `type`, dùng được ở mọi `inspectionStage`.
 
 ### POST `/api/qa-tickets` — tạo mới
 ### PUT `/api/qa-tickets/{id}` — cập nhật toàn bộ
@@ -145,6 +147,9 @@ Cả 2 dùng chung request body:
     { "type": "SIZE_SPEC", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" },
     { "type": "PACKING", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" },
     { "type": "HANGTAG_LABEL", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" }
+  ],
+  "measurementImages": [
+    { "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg" }
   ]
 }
 ```
@@ -164,6 +169,12 @@ chung endpoint) — thiếu 1 trong 2 sẽ bị `400`. FE nên chia UI thành 4 
 ảnh spec trên form khi user chọn công đoạn `FINAL`; các công đoạn khác (`INLINE`/`ENDLINE`/`INPUT`)
 ẩn hẳn phần này và không gửi field `specImages` lên (hoặc gửi `null`/mảng rỗng).
 
+**`measurementImages`** — mảng object `{ imageUrl }`, cấp ticket, **tách riêng khỏi `specImages`**,
+optional, không giới hạn số lượng, không phân loại `type`. Khác với `specImages`, phần này áp dụng
+cho **mọi** `inspectionStage` (`INLINE`/`ENDLINE`/`FINAL`/`INPUT`), không bị giới hạn chỉ ở `FINAL`.
+Mỗi item chỉ cần `imageUrl` (lấy từ mục 2, upload chung endpoint) — thiếu sẽ bị `400`. FE hiển thị
+đây như 1 khu vực upload ảnh riêng trên form (không gộp chung UI với 4 khu vực specImages).
+
 **`styleId`** — style **suy ra mặc định từ PO đã chọn nhưng FE có thể ghi đè**: nếu request không
 gửi `styleId` (null/không có field), server tự lấy style của `poId`; nếu FE gửi `styleId` khác thì
 server lưu đúng giá trị đó (ticket có thể có style khác PO). Flow gợi ý cho form: khi user chọn PO
@@ -171,9 +182,10 @@ server lưu đúng giá trị đó (ticket có thể có style khác PO). Flow g
 sửa được) → nếu user không đổi gì thì gửi nguyên giá trị đó lên, nếu đổi thì gửi `styleId` mới.
 Danh sách style đầy đủ để làm dropdown đổi style: `GET /api/master/styles` (mục 4).
 
-⚠️ **PUT thay thế toàn bộ cây con** (defects/locations/images/specImages cũ bị xoá sạch rồi dựng
-lại từ payload mới — orphan removal). Khi sửa ticket, FE phải GET chi tiết trước, giữ nguyên các
-defect/location/image/specImage cũ trong payload nếu không muốn mất, không phải gửi diff.
+⚠️ **PUT thay thế toàn bộ cây con** (defects/locations/images/specImages/measurementImages cũ bị
+xoá sạch rồi dựng lại từ payload mới — orphan removal). Khi sửa ticket, FE phải GET chi tiết trước,
+giữ nguyên các defect/location/image/specImage/measurementImage cũ trong payload nếu không muốn
+mất, không phải gửi diff.
 
 Response `201` (create) / `200` (update) — xem `QaTicketResponse` bên dưới (mục GET chi tiết).
 Validate lỗi → `400` với `fieldErrors`. Ticket/staff/factory/... không tồn tại → `404`.
@@ -221,12 +233,19 @@ Response `200`:
   "specImages": [
     { "id": 12, "type": "APPROVED_SAMPLE", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" },
     { "id": 13, "type": "SIZE_SPEC", "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" }
+  ],
+  "measurementImages": [
+    { "id": 5, "imageUrl": "https://pub-xxxx.r2.dev/qa-ticket/....jpg", "uploadedAt": "2026-07-24T17:05:14.202223" }
   ]
 }
 ```
 `specImages[].type` là 1 trong 4 giá trị `SpecImageType` — FE dùng để nhóm ảnh hiển thị lại đúng
 4 khu vực trên UI. Ảnh tạo trước khi có field `type` (dữ liệu cũ) sẽ có `type: null` — FE nên có
 khu vực "Khác"/fallback cho trường hợp này.
+
+`measurementImages` là mục **riêng biệt** với `specImages` (không có `type`, không giới hạn
+`inspectionStage`) — FE hiển thị thành 1 khu vực ảnh độc lập trên UI chi tiết ticket, không gộp
+chung với 4 khu vực specImages.
 `group`, `purchaseOrder`, `style` có thể `null`. `{ id, name }` (kiểu `RefResponse`) lặp lại cho mọi
 quan hệ tham chiếu (staff/factory/line/group/purchaseOrder/style/customer/garmentType/garmentLocation/defect) —
 `name` là tên hiển thị sẵn, FE không cần tự lookup thêm.

@@ -26,6 +26,7 @@ public record QaTicketRequest(
         @Min(0) Integer actualMajorDefects,
         @Min(0) Integer actualMinorDefects,
         @Valid List<QaTicketDefectRequest> defects,
-        @Valid List<QaTicketSpecImageRequest> specImages
+        @Valid List<QaTicketSpecImageRequest> specImages,
+        @Valid List<QaTicketMeasurementImageRequest> measurementImages
 ) {
 }
