@@ -31,9 +31,6 @@ public class QaTicketService {
     private final FactoryRepository factoryRepository;
     private final LineRepository lineRepository;
     private final ProductionGroupRepository productionGroupRepository;
-    private final PurchaseOrderRepository purchaseOrderRepository;
-    private final StyleRepository styleRepository;
-    private final CustomerRepository customerRepository;
     private final GarmentTypeRepository garmentTypeRepository;
     private final GarmentLocationRepository garmentLocationRepository;
     private final DefectItemRepository defectItemRepository;
@@ -45,9 +42,6 @@ public class QaTicketService {
                             FactoryRepository factoryRepository,
                             LineRepository lineRepository,
                             ProductionGroupRepository productionGroupRepository,
-                            PurchaseOrderRepository purchaseOrderRepository,
-                            StyleRepository styleRepository,
-                            CustomerRepository customerRepository,
                             GarmentTypeRepository garmentTypeRepository,
                             GarmentLocationRepository garmentLocationRepository,
                             DefectItemRepository defectItemRepository,
@@ -58,9 +52,6 @@ public class QaTicketService {
         this.factoryRepository = factoryRepository;
         this.lineRepository = lineRepository;
         this.productionGroupRepository = productionGroupRepository;
-        this.purchaseOrderRepository = purchaseOrderRepository;
-        this.styleRepository = styleRepository;
-        this.customerRepository = customerRepository;
         this.garmentTypeRepository = garmentTypeRepository;
         this.garmentLocationRepository = garmentLocationRepository;
         this.defectItemRepository = defectItemRepository;
@@ -109,7 +100,7 @@ public class QaTicketService {
     }
 
     @Transactional(readOnly = true)
-    public CursorPageResponse<QaTicketSummaryResponse> list(Long factoryId, Long customerId, Long staffId, TicketStatus status,
+    public CursorPageResponse<QaTicketSummaryResponse> list(Long factoryId, String customer, Long staffId, TicketStatus status,
                                                               Boolean exported, LocalDate dateFrom, LocalDate dateTo,
                                                               Long cursor, int size, Staff currentStaff) {
         // Non-admins are restricted to their own tickets regardless of the staffId they pass in,
@@ -119,7 +110,7 @@ public class QaTicketService {
         Specification<QaTicket> spec = Specification.allOf(
                 QaTicketSpecifications.withSummaryAssociations(),
                 QaTicketSpecifications.factoryId(factoryId),
-                QaTicketSpecifications.customerId(customerId),
+                QaTicketSpecifications.customer(customer),
                 QaTicketSpecifications.staffId(effectiveStaffId),
                 QaTicketSpecifications.status(status),
                 QaTicketSpecifications.exported(exported),
@@ -139,11 +130,20 @@ public class QaTicketService {
         return new CursorPageResponse<>(page.stream().map(QaTicketSummaryResponse::from).toList(), nextCursor, hasNext);
     }
 
-    public void delete(Long id) {
+    public void delete(Long id, Staff currentStaff) {
         QaTicket ticket = qaTicketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("QA ticket not found: " + id));
-        if (ticket.getStatus() != TicketStatus.DRAFT) {
-            throw new InvalidTicketStateException("Only DRAFT tickets can be deleted: " + id);
+        // Admins can delete any ticket regardless of status or owner. Non-admins may only delete
+        // their own DRAFT tickets; a non-owner gets 404 (mirrors getById) rather than 403 so we
+        // don't confirm the ticket's existence, and a submitted ticket of their own gets 409.
+        if (currentStaff.getRole() != StaffRole.ADMIN) {
+            boolean isOwner = ticket.getStaff().getId().equals(currentStaff.getId());
+            if (!isOwner) {
+                throw new ResourceNotFoundException("QA ticket not found: " + id);
+            }
+            if (ticket.getStatus() != TicketStatus.DRAFT) {
+                throw new InvalidTicketStateException("Only DRAFT tickets can be deleted: " + id);
+            }
         }
         qaTicketRepository.delete(ticket);
     }
@@ -169,25 +169,13 @@ public class QaTicketService {
         ticket.setFactory(getRef(factoryRepository, request.factoryId(), "Factory"));
         ticket.setLine(getRef(lineRepository, request.lineId(), "Line"));
         ticket.setGroup(request.groupId() != null ? getRef(productionGroupRepository, request.groupId(), "ProductionGroup") : null);
-        ticket.setPurchaseOrder(request.poId() != null ? getRef(purchaseOrderRepository, request.poId(), "PurchaseOrder") : null);
-        ticket.setStyle(resolveStyle(ticket, request));
-        ticket.setCustomer(getRef(customerRepository, request.customerId(), "Customer"));
+        ticket.setPoNumber(request.poNumber());
+        ticket.setStyle(request.style());
+        ticket.setCustomerName(request.customerName());
         ticket.setGarmentType(getRef(garmentTypeRepository, request.garmentTypeId(), "GarmentType"));
         ticket.setInspectionStage(request.inspectionStage());
         ticket.setInspectedQty(request.inspectedQty());
         ticket.setStatus(request.status());
-    }
-
-    /**
-     * Style is independently selectable but defaults to the chosen PO's style: an explicit
-     * styleId always wins, otherwise fall back to purchaseOrder.style so tickets without an
-     * override still carry the style implied by their PO.
-     */
-    private Style resolveStyle(QaTicket ticket, QaTicketRequest request) {
-        if (request.styleId() != null) {
-            return getRef(styleRepository, request.styleId(), "Style");
-        }
-        return ticket.getPurchaseOrder() != null ? ticket.getPurchaseOrder().getStyle() : null;
     }
 
     private void rebuildDefects(QaTicket ticket, QaTicketRequest request) {

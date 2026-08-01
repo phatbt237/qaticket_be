@@ -5,6 +5,7 @@ import com.qms.qms.entity.enums.InspectionStage;
 import com.qms.qms.entity.enums.TicketStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -15,10 +16,10 @@ public record QaTicketRequest(
         @NotNull Long lineId,
         Long groupId,
         @NotNull InspectionStage inspectionStage,
-        Long poId,
-        Long styleId,
+        String poNumber,
+        String style,
         @NotNull @Min(1) Integer inspectedQty,
-        @NotNull Long customerId,
+        @NotBlank String customerName,
         @NotNull Long garmentTypeId,
         @NotNull TicketStatus status,
         AqlLevel aqlLevel,

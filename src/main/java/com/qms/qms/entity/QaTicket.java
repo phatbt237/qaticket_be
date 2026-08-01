@@ -46,17 +46,14 @@ public class QaTicket {
     @JoinColumn(name = "group_id")
     private ProductionGroup group;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "po_id")
-    private PurchaseOrder purchaseOrder;
+    @Column(name = "po_number", length = 50)
+    private String poNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "style_id")
-    private Style style;
+    @Column(length = 150)
+    private String style;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @Column(name = "customer_name", nullable = false, length = 150)
+    private String customerName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "garment_type_id", nullable = false)

@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface QaTicketRepository extends JpaRepository<QaTicket, Long>, JpaSpecificationExecutor<QaTicket> {
 
     @EntityGraph(attributePaths = {
-            "staff", "factory", "line", "group", "purchaseOrder", "style", "customer", "garmentType",
+            "staff", "factory", "line", "group", "garmentType",
             "defects", "defects.defectItem", "defects.defectItem.defect", "defects.locations",
             "defects.locations.garmentLocation", "defects.locations.images", "specImages"
     })

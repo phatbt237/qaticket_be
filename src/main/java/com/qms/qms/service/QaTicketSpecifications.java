@@ -19,7 +19,6 @@ public final class QaTicketSpecifications {
                 root.fetch("staff", JoinType.LEFT);
                 root.fetch("factory", JoinType.LEFT);
                 root.fetch("line", JoinType.LEFT);
-                root.fetch("customer", JoinType.LEFT);
             }
             return cb.conjunction();
         };
@@ -29,8 +28,9 @@ public final class QaTicketSpecifications {
         return (root, query, cb) -> factoryId == null ? null : cb.equal(root.get("factory").get("id"), factoryId);
     }
 
-    public static Specification<QaTicket> customerId(Long customerId) {
-        return (root, query, cb) -> customerId == null ? null : cb.equal(root.get("customer").get("id"), customerId);
+    public static Specification<QaTicket> customer(String customer) {
+        return (root, query, cb) -> (customer == null || customer.isBlank()) ? null
+                : cb.like(cb.lower(root.get("customerName")), "%" + customer.toLowerCase() + "%");
     }
 
     public static Specification<QaTicket> staffId(Long staffId) {

@@ -27,7 +27,7 @@ public record QaTicketSummaryResponse(
                 t.getStaff().getFullName(),
                 t.getFactory().getName(),
                 t.getLine().getName(),
-                t.getCustomer().getName(),
+                t.getCustomerName(),
                 t.getInspectionStage(),
                 t.getInspectedQty(),
                 t.getStatus(),

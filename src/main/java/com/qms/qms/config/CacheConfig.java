@@ -16,10 +16,8 @@ public class CacheConfig {
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager(
-                "garmentTypes", "garmentLocations", "defectItems", "purchaseOrders",
-                "staff", "factories", "lines", "groups", "customers", "defects", "styles");
-        // maximumSize bounds "purchaseOrders", whose cache key includes the free-text `search`
-        // param and would otherwise grow unbounded as users type different search strings.
+                "garmentTypes", "garmentLocations", "defectItems",
+                "staff", "factories", "lines", "groups", "defects");
         manager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(Duration.ofHours(24)).maximumSize(2000));
         return manager;
     }
