@@ -59,4 +59,17 @@ public final class QaTicketSpecifications {
     public static Specification<QaTicket> idBefore(Long cursor) {
         return (root, query, cb) -> cursor == null ? null : cb.lessThan(root.get("id"), cursor);
     }
+
+    /** Fetch-joins the defect/location/defect-item/defect-category graph read by the dashboard aggregation. */
+    public static Specification<QaTicket> withDashboardAssociations() {
+        return (root, query, cb) -> {
+            if (query.getResultType() != Long.class) {
+                var defectsFetch = root.fetch("defects", JoinType.LEFT);
+                defectsFetch.fetch("locations", JoinType.LEFT);
+                defectsFetch.fetch("defectItem", JoinType.LEFT).fetch("defect", JoinType.LEFT);
+                query.distinct(true);
+            }
+            return cb.conjunction();
+        };
+    }
 }

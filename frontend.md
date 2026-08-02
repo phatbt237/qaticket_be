@@ -323,6 +323,59 @@ Response `200`: `QaTicketResponse` đầy đủ.
 Response `204`. **Chỉ xoá được ticket đang ở trạng thái `DRAFT`** — nếu đã `SUBMITTED` trả về
 `409 Conflict`.
 
+### GET `/api/qa/dashboard` — Dashboard QA Ticket
+
+Không có query param nào bắt buộc — gộp **toàn bộ** ticket đang `SUBMITTED` trong DB (bỏ qua
+`DRAFT`, tránh dữ liệu nháp làm nhiễu DHU/Pareto). Chưa có filter (theo PO/factory/khoảng ngày...);
+sẽ bổ sung query param optional sau nếu cần thu hẹp phạm vi.
+
+Response `200`:
+```json
+{
+  "totalInspections": 5,
+  "stageSummary": [
+    { "stage": "FIRST_OUTPUT", "label": "First Output", "count": 1 },
+    { "stage": "INLINE", "label": "Inline", "count": 1 },
+    { "stage": "ENDLINE", "label": "Endline", "count": 1 },
+    { "stage": "PREFINAL_FINAL", "label": "Prefinal/Final", "count": 1 },
+    { "stage": "PACKING", "label": "Packing", "count": 1 }
+  ],
+  "dhuTimeline": [
+    { "date": "2026-07-31", "dhuPercent": 5.0 },
+    { "date": "2026-08-01", "dhuPercent": 6.3 }
+  ],
+  "paretoDefectGroups": [
+    { "groupName": "Vệ Sinh Công Nghiệp", "defectCount": 11, "cumulativePercent": 78.6 },
+    { "groupName": "Phụ Liệu", "defectCount": 3, "cumulativePercent": 100.0 }
+  ],
+  "dhuByStage": [
+    { "stage": "FIRST_OUTPUT", "label": "First Output", "dhuPercent": 0.0 },
+    { "stage": "INLINE", "label": "Inline", "dhuPercent": 5.0 },
+    { "stage": "ENDLINE", "label": "Endline", "dhuPercent": 6.3 },
+    { "stage": "PREFINAL_FINAL", "label": "Prefinal/Final", "dhuPercent": 3.2 },
+    { "stage": "PACKING", "label": "Packing", "dhuPercent": 0.0 }
+  ]
+}
+```
+
+Chi tiết từng khối (dùng đúng cho 4 block UI: card tổng hợp / line chart / pareto chart / column chart):
+
+- **`stageSummary`**: số lượng ticket (phiếu kiểm) theo từng khâu, **luôn đủ 5 phần tử theo đúng
+  thứ tự cố định** kể cả `count = 0`. `PREFINAL_FINAL` gộp chung 2 giá trị enum `PREFINAL` và
+  `FINAL` của `InspectionStage` (backend nội bộ vẫn phân biệt 2 stage này — xem mục Enum — chỉ
+  gộp hiển thị ở dashboard).
+- **`dhuTimeline`**: mỗi điểm là 1 ngày có ít nhất 1 ticket (`created_at` theo giờ VN), sắp xếp
+  tăng dần; **không tự động điền ngày trống** (ngày không có ticket thì không xuất hiện điểm).
+  `dhuPercent = tổng quantity lỗi trong ngày / tổng inspectedQty trong ngày × 100`, làm tròn 1
+  chữ số thập phân.
+- **`paretoDefectGroups`**: group theo **`Defect`** (nhóm lỗi cấp cha của `DefectItem`, vd "Lỗi
+  May"), sắp xếp giảm dần theo `defectCount` (tổng `quantity` của mọi `QaTicketDefectLocation`
+  thuộc nhóm), kèm `cumulativePercent` dồn tích để FE vẽ đường 80/20. Nhóm nào không phát sinh
+  lỗi thì không xuất hiện (mảng có thể ngắn hơn tổng số `Defect` trong hệ thống).
+  `defectCount` tính theo `quantity`, không phải số dòng defect.
+- **`dhuByStage`**: DHU riêng từng khâu (đủ 5 phần tử cố định như `stageSummary`, `dhuPercent = 0`
+  nếu khâu đó chưa có ticket hoặc không có lỗi).
+
 ---
 
 ## 4. Master data (dropdown/danh mục)
