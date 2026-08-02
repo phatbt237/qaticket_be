@@ -75,6 +75,13 @@ public class MasterDataController {
         return new CursorPageResponse<>(page.stream().map(StaffResponse::from).toList(), nextCursor, hasNext);
     }
 
+    /** Full, unpaginated staff list for dropdowns — cached, unlike {@link #staff} which is search/paginated. */
+    @Cacheable("staff")
+    @GetMapping("/staff/all")
+    public List<StaffResponse> allStaff() {
+        return staffRepository.findAll().stream().map(StaffResponse::from).toList();
+    }
+
     @Cacheable("factories")
     @GetMapping("/factories")
     public List<FactoryResponse> factories() {

@@ -323,11 +323,17 @@ Response `200`: `QaTicketResponse` đầy đủ.
 Response `204`. **Chỉ xoá được ticket đang ở trạng thái `DRAFT`** — nếu đã `SUBMITTED` trả về
 `409 Conflict`.
 
-### GET `/api/qa/dashboard` — Dashboard QA Ticket
+### GET `/api/qa/dashboard?staffId=&factoryId=` — Dashboard QA Ticket
 
-Không có query param nào bắt buộc — gộp **toàn bộ** ticket đang `SUBMITTED` trong DB (bỏ qua
-`DRAFT`, tránh dữ liệu nháp làm nhiễu DHU/Pareto). Chưa có filter (theo PO/factory/khoảng ngày...);
-sẽ bổ sung query param optional sau nếu cần thu hẹp phạm vi.
+Gộp **toàn bộ** ticket đang `SUBMITTED` trong DB (bỏ qua `DRAFT`, tránh dữ liệu nháp làm nhiễu
+DHU/Pareto). Cả 2 query param đều **optional**, bỏ qua để lấy toàn bộ:
+
+| Param | Kiểu | Ghi chú |
+|---|---|---|
+| `staffId` | Long | lọc theo nhân viên kiểm — lấy id từ `/api/master/staff/all` (mục 4) |
+| `factoryId` | Long | lọc theo nhà máy — lấy id từ `/api/master/factories` (mục 4) |
+
+Truyền cả 2 thì áp dụng đồng thời (AND).
 
 Response `200`:
 ```json
@@ -381,13 +387,14 @@ Chi tiết từng khối (dùng đúng cho 4 block UI: card tổng hợp / line 
 ## 4. Master data (dropdown/danh mục)
 
 Toàn bộ đều `GET`, trả `List<...>` phẳng — dùng đổ vào dropdown. Ngoại lệ duy nhất là
-`/api/master/staff`, đã đổi sang cursor pagination (xem chi tiết bên dưới).
+`/api/master/staff` (không phải `/staff/all`), đã đổi sang cursor pagination (xem chi tiết bên dưới).
 Các endpoint còn lại đều được **cache 24h phía server** (danh mục gần như không đổi trong ngày) —
 FE gọi lại thoải mái mỗi lần vào form (kể cả `lines`/`groups` gọi lại theo từng `factoryId`/`lineId`
 khác nhau khi cascade dropdown) mà không lo tốn round-trip DB.
 
 | Endpoint | Query param | Response item |
 |---|---|---|
+| `/api/master/staff/all` | — | `{ id, code, fullName, role, active }` |
 | `/api/master/factories` | — | `{ id, code, name, address }` |
 | `/api/master/lines` | `factoryId` (optional, lọc theo nhà máy) | `{ id, factoryId, code, name }` |
 | `/api/master/groups` | `lineId` (optional, lọc theo chuyền) | `{ id, lineId, name }` |
@@ -397,16 +404,18 @@ khác nhau khi cascade dropdown) mà không lo tốn round-trip DB.
 | `/api/master/defects` | — | `{ id, code, nameEn, nameVi }` |
 | `/api/master/styles` | — | `{ id, code, name }` |
 
+`/api/master/staff/all` là danh sách **đầy đủ, không phân trang**, dùng để đổ dropdown chọn nhân
+viên (vd filter dashboard theo `staffId`) — cache 24h, tự làm mới (evict) ngay khi có
+tạo/khoá/mở khoá tài khoản qua các API ở mục 4b, không cần đợi hết TTL.
+
 **Dropdown phụ thuộc (cascade)**: khi tạo ticket, FE nên gọi `lines?factoryId=` sau khi chọn nhà
 máy, `groups?lineId=` sau khi chọn chuyền, `garment-locations?garmentTypeId=` sau khi chọn loại
 hàng — không cần load hết rồi filter phía client.
 
 ### GET `/api/master/staff` — cursor pagination + search theo tên
 
-⚠️ **Đã đổi từ "trả hết danh sách" sang cursor (keyset) pagination**, không còn cache phía server
-(vì kết quả giờ phụ thuộc query param). Nếu FE đang dùng endpoint này để đổ dropdown chọn nhân
-viên (load 1 lần, không phân trang) thì cần sửa lại: hoặc gọi lặp nhiều trang (theo `nextCursor`)
-để gom đủ danh sách, hoặc truyền `size` đủ lớn (tối đa `100`) nếu tổng số nhân viên không vượt quá.
+Khác với `/api/master/staff/all` ở trên — endpoint này dùng cho màn **quản trị user** (list có
+tìm kiếm + phân trang), không phải để đổ dropdown. Không cache (vì kết quả phụ thuộc query param).
 
 Query param:
 

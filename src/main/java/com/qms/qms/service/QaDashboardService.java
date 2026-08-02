@@ -43,10 +43,12 @@ public class QaDashboardService {
     }
 
     @Transactional(readOnly = true)
-    public QaDashboardResponse getDashboard() {
+    public QaDashboardResponse getDashboard(Long staffId, Long factoryId) {
         Specification<QaTicket> spec = Specification.allOf(
                 QaTicketSpecifications.withDashboardAssociations(),
-                QaTicketSpecifications.status(TicketStatus.SUBMITTED)
+                QaTicketSpecifications.status(TicketStatus.SUBMITTED),
+                QaTicketSpecifications.staffId(staffId),
+                QaTicketSpecifications.factoryId(factoryId)
         );
         List<QaTicket> tickets = qaTicketRepository.findAll(spec);
 

@@ -4,6 +4,7 @@ import com.qms.qms.dto.dashboard.QaDashboardResponse;
 import com.qms.qms.service.QaDashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,11 +19,12 @@ public class QaDashboardController {
 
     /**
      * Aggregated dashboard (stage counts, DHU timeline, defect Pareto, DHU by stage) across every
-     * SUBMITTED ticket currently in the database — no filters yet, add query params here later
-     * if scoping (e.g. by PO, factory, date range) turns out to be needed.
+     * SUBMITTED ticket currently in the database. {@code staffId}/{@code factoryId} are optional
+     * filters; omit both to see every ticket.
      */
     @GetMapping("/dashboard")
-    public QaDashboardResponse dashboard() {
-        return qaDashboardService.getDashboard();
+    public QaDashboardResponse dashboard(@RequestParam(required = false) Long staffId,
+                                          @RequestParam(required = false) Long factoryId) {
+        return qaDashboardService.getDashboard(staffId, factoryId);
     }
 }

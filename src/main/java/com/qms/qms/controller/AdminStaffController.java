@@ -9,6 +9,7 @@ import com.qms.qms.repository.StaffRepository;
 import com.qms.qms.security.RefreshTokenService;
 import com.qms.qms.security.StaffPrincipal;
 import jakarta.validation.Valid;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,6 +37,7 @@ public class AdminStaffController {
         this.passwordEncoder = passwordEncoder;
     }
 
+    @CacheEvict(cacheNames = "staff", allEntries = true)
     @PostMapping
     public ResponseEntity<StaffResponse> create(@Valid @RequestBody CreateStaffRequest request,
                                                  @AuthenticationPrincipal StaffPrincipal principal) {
@@ -55,6 +57,7 @@ public class AdminStaffController {
 
     /** Locking blocks login immediately (Staff.active backs StaffPrincipal#isEnabled) and revokes
      * every refresh token the staff currently holds, so an already-open session can't refresh either. */
+    @CacheEvict(cacheNames = "staff", allEntries = true)
     @PatchMapping("/{id}/lock")
     public ResponseEntity<Void> lock(@PathVariable Long id, @AuthenticationPrincipal StaffPrincipal principal) {
         if (principal.getStaff().getId().equals(id)) {
@@ -67,6 +70,7 @@ public class AdminStaffController {
         return ResponseEntity.noContent().build();
     }
 
+    @CacheEvict(cacheNames = "staff", allEntries = true)
     @PatchMapping("/{id}/unlock")
     public ResponseEntity<Void> unlock(@PathVariable Long id, @AuthenticationPrincipal StaffPrincipal principal) {
         Staff target = requireTarget(principal, id);
