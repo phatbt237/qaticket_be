@@ -8,7 +8,9 @@ import com.qms.qms.dto.dashboard.StageSummaryDTO;
 import com.qms.qms.entity.QaTicket;
 import com.qms.qms.entity.QaTicketDefect;
 import com.qms.qms.entity.QaTicketDefectLocation;
+import com.qms.qms.entity.Staff;
 import com.qms.qms.entity.enums.InspectionStage;
+import com.qms.qms.entity.enums.StaffRole;
 import com.qms.qms.entity.enums.TicketStatus;
 import com.qms.qms.repository.QaTicketRepository;
 import org.springframework.data.jpa.domain.Specification;
@@ -43,11 +45,15 @@ public class QaDashboardService {
     }
 
     @Transactional(readOnly = true)
-    public QaDashboardResponse getDashboard(Long staffId, Long factoryId) {
+    public QaDashboardResponse getDashboard(Long staffId, Long factoryId, Staff currentStaff) {
+        // Non-admins are restricted to their own data regardless of the staffId they pass in,
+        // mirroring QaTicketService.list() — same rule, same reason.
+        Long effectiveStaffId = currentStaff.getRole() == StaffRole.ADMIN ? staffId : currentStaff.getId();
+
         Specification<QaTicket> spec = Specification.allOf(
                 QaTicketSpecifications.withDashboardAssociations(),
                 QaTicketSpecifications.status(TicketStatus.SUBMITTED),
-                QaTicketSpecifications.staffId(staffId),
+                QaTicketSpecifications.staffId(effectiveStaffId),
                 QaTicketSpecifications.factoryId(factoryId)
         );
         List<QaTicket> tickets = qaTicketRepository.findAll(spec);

@@ -330,10 +330,15 @@ DHU/Pareto). Cả 2 query param đều **optional**, bỏ qua để lấy toàn 
 
 | Param | Kiểu | Ghi chú |
 |---|---|---|
-| `staffId` | Long | lọc theo nhân viên kiểm — lấy id từ `/api/master/staff/all` (mục 4) |
-| `factoryId` | Long | lọc theo nhà máy — lấy id từ `/api/master/factories` (mục 4) |
+| `staffId` | Long | lọc theo nhân viên kiểm — lấy id từ `/api/master/staff/all` (mục 4). **Chỉ admin dùng được** |
+| `factoryId` | Long | lọc theo nhà máy — lấy id từ `/api/master/factories` (mục 4). Ai cũng dùng được |
 
 Truyền cả 2 thì áp dụng đồng thời (AND).
+
+⚠️ **Phân quyền theo role**: `factoryId` ai cũng lọc được thoải mái, nhưng `staffId` **chỉ có tác
+dụng với admin**. Với `QA_INSPECTOR`/`QA_LEAD`, server luôn tự ép `staffId` về đúng id của chính
+người gọi — có truyền `staffId` khác lên hay không cũng bị bỏ qua, không xem được dữ liệu của
+nhân viên khác. Admin thì không bị giới hạn gì, xem/lọc được toàn bộ.
 
 Response `200`:
 ```json
