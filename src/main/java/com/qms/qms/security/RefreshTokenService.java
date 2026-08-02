@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 
 @Service
 public class RefreshTokenService {
@@ -53,6 +54,14 @@ public class RefreshTokenService {
             rt.setRevoked(true);
             refreshTokenRepository.save(rt);
         });
+    }
+
+    /** Revokes every still-valid refresh token for the staff, e.g. when an admin locks their account. */
+    @Transactional
+    public void revokeAllForStaff(Staff staff) {
+        List<RefreshToken> tokens = refreshTokenRepository.findByStaffAndRevokedFalse(staff);
+        tokens.forEach(rt -> rt.setRevoked(true));
+        refreshTokenRepository.saveAll(tokens);
     }
 
     private String generateSecureToken() {

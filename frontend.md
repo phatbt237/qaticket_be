@@ -27,7 +27,7 @@ Mọi lỗi (400/401/403/404/409/500...) đều trả về JSON dạng:
 ## Enum dùng chung
 
 - `TicketStatus`: `DRAFT` | `SUBMITTED`
-- `InspectionStage`: `INLINE` | `ENDLINE` | `FINAL` | `INPUT`
+- `InspectionStage`: `FIRST_OUTPUT` | `INLINE` | `ENDLINE` | `PREFINAL` | `FINAL` | `PACKING`
 - `StaffRole`: `QA_INSPECTOR` | `QA_LEAD` | `ADMIN`
 - `SpecImageType` (loại ảnh trong `specImages` của ticket):
   - `APPROVED_SAMPLE` — Mẫu duyệt
@@ -57,7 +57,10 @@ Response `200`:
   "role": "QA_INSPECTOR"
 }
 ```
-Sai username/password → `401`.
+Sai username/password → `401` với `message: "Invalid username or password"`.
+Tài khoản bị admin khoá (xem mục 4b) → cũng `401` nhưng `message: "Tài khoản đã bị khóa"` — FE
+nên phân biệt 2 trường hợp này qua `message` để hiển thị đúng cho user (không hiện "sai mật khẩu"
+khi thực ra tài khoản đang bị khoá).
 
 `accessToken` hết hạn sau **1 giờ** (`expiresInMs`). `refreshToken` hết hạn sau **30 ngày**.
 
@@ -77,6 +80,22 @@ Body:
 ```
 Response `204` (không có body). Thu hồi refresh token trên server — FE tự xoá accessToken +
 refreshToken khỏi local storage sau khi gọi xong.
+
+### POST `/api/auth/change-password`
+Cần `Authorization` header (đổi mật khẩu của chính user đang đăng nhập). Body:
+```json
+{ "oldPassword": "123456", "newPassword": "abcdef" }
+```
+`newPassword` bắt buộc 6-100 ký tự. Sai `oldPassword` → `400`. Response `204`.
+
+### POST `/api/auth/staff/{staffId}/reset-password`
+**Chỉ admin** gọi được — đổi mật khẩu của **bất kỳ** staff nào khác, không cần biết mật khẩu cũ.
+Body:
+```json
+{ "newPassword": "abcdef" }
+```
+`newPassword` bắt buộc 6-100 ký tự. Không phải admin → `403`. `staffId` không tồn tại → `404`.
+Response `204`.
 
 ---
 
@@ -105,7 +124,8 @@ Các URL này dùng trực tiếp vào field `images` khi tạo/sửa QA ticket 
 Cấu trúc lồng nhau: **Ticket → nhiều Defect → mỗi Defect nhiều Location → mỗi Location nhiều Image**.
 Ngoài ra ticket còn có 2 nhóm ảnh cấp ticket riêng biệt (không thuộc defect nào), đều optional,
 nhiều ảnh:
-- `specImages`: ảnh spec tham chiếu, phân theo 4 `type`, chỉ dùng khi `inspectionStage = FINAL`.
+- `specImages`: ảnh spec tham chiếu, phân theo 4 `type`, chỉ dùng khi `inspectionStage` là `FINAL`
+  hoặc `PREFINAL`.
 - `measurementImages`: ảnh thông số/đo đạc, không phân loại `type`, dùng được ở mọi `inspectionStage`.
 
 ### POST `/api/qa-tickets` — tạo mới
@@ -164,14 +184,15 @@ phép nhiều ảnh cùng `type` (VD: nhiều ảnh Bảng thông số kích th�
 chung endpoint) — thiếu 1 trong 2 sẽ bị `400`. FE nên chia UI thành 4 khu vực upload theo đúng
 4 `type` để người dùng chọn ảnh vào đúng mục, không cần tự gộp/tag lại phía client.
 
-⚠️ **`specImages` chỉ được truyền khi `inspectionStage = "FINAL"`.** Nếu `inspectionStage` khác
-`FINAL` mà request có `specImages` (mảng không rỗng) → `400`. FE chỉ hiện khu vực upload 4 loại
-ảnh spec trên form khi user chọn công đoạn `FINAL`; các công đoạn khác (`INLINE`/`ENDLINE`/`INPUT`)
-ẩn hẳn phần này và không gửi field `specImages` lên (hoặc gửi `null`/mảng rỗng).
+⚠️ **`specImages` chỉ được truyền khi `inspectionStage` là `"FINAL"` hoặc `"PREFINAL"`.** Nếu
+`inspectionStage` khác 2 giá trị này mà request có `specImages` (mảng không rỗng) → `400`. FE chỉ
+hiện khu vực upload 4 loại ảnh spec trên form khi user chọn công đoạn `FINAL`/`PREFINAL`; các công
+đoạn khác (`FIRST_OUTPUT`/`INLINE`/`ENDLINE`/`PACKING`) ẩn hẳn phần này và không gửi field
+`specImages` lên (hoặc gửi `null`/mảng rỗng).
 
 **`measurementImages`** — mảng object `{ imageUrl }`, cấp ticket, **tách riêng khỏi `specImages`**,
 optional, không giới hạn số lượng, không phân loại `type`. Khác với `specImages`, phần này áp dụng
-cho **mọi** `inspectionStage` (`INLINE`/`ENDLINE`/`FINAL`/`INPUT`), không bị giới hạn chỉ ở `FINAL`.
+cho **mọi** `inspectionStage`, không bị giới hạn chỉ ở `FINAL`/`PREFINAL`.
 Mỗi item chỉ cần `imageUrl` (lấy từ mục 2, upload chung endpoint) — thiếu sẽ bị `400`. FE hiển thị
 đây như 1 khu vực upload ảnh riêng trên form (không gộp chung UI với 4 khu vực specImages).
 
@@ -306,14 +327,14 @@ Response `204`. **Chỉ xoá được ticket đang ở trạng thái `DRAFT`** �
 
 ## 4. Master data (dropdown/danh mục)
 
-Toàn bộ đều `GET`, không phân trang, trả `List<...>` phẳng — dùng đổ vào dropdown.
-Toàn bộ đều được **cache 24h phía server** (danh mục gần như không đổi trong ngày) — FE gọi lại
-thoải mái mỗi lần vào form (kể cả `lines`/`groups` gọi lại theo từng `factoryId`/`lineId` khác
-nhau khi cascade dropdown) mà không lo tốn round-trip DB.
+Toàn bộ đều `GET`, trả `List<...>` phẳng — dùng đổ vào dropdown. Ngoại lệ duy nhất là
+`/api/master/staff`, đã đổi sang cursor pagination (xem chi tiết bên dưới).
+Các endpoint còn lại đều được **cache 24h phía server** (danh mục gần như không đổi trong ngày) —
+FE gọi lại thoải mái mỗi lần vào form (kể cả `lines`/`groups` gọi lại theo từng `factoryId`/`lineId`
+khác nhau khi cascade dropdown) mà không lo tốn round-trip DB.
 
 | Endpoint | Query param | Response item |
 |---|---|---|
-| `/api/master/staff` | — | `{ id, code, fullName, role, active }` |
 | `/api/master/factories` | — | `{ id, code, name, address }` |
 | `/api/master/lines` | `factoryId` (optional, lọc theo nhà máy) | `{ id, factoryId, code, name }` |
 | `/api/master/groups` | `lineId` (optional, lọc theo chuyền) | `{ id, lineId, name }` |
@@ -326,6 +347,65 @@ nhau khi cascade dropdown) mà không lo tốn round-trip DB.
 **Dropdown phụ thuộc (cascade)**: khi tạo ticket, FE nên gọi `lines?factoryId=` sau khi chọn nhà
 máy, `groups?lineId=` sau khi chọn chuyền, `garment-locations?garmentTypeId=` sau khi chọn loại
 hàng — không cần load hết rồi filter phía client.
+
+### GET `/api/master/staff` — cursor pagination + search theo tên
+
+⚠️ **Đã đổi từ "trả hết danh sách" sang cursor (keyset) pagination**, không còn cache phía server
+(vì kết quả giờ phụ thuộc query param). Nếu FE đang dùng endpoint này để đổ dropdown chọn nhân
+viên (load 1 lần, không phân trang) thì cần sửa lại: hoặc gọi lặp nhiều trang (theo `nextCursor`)
+để gom đủ danh sách, hoặc truyền `size` đủ lớn (tối đa `100`) nếu tổng số nhân viên không vượt quá.
+
+Query param:
+
+| Param | Kiểu | Ghi chú |
+|---|---|---|
+| `name` | String | optional, lọc theo `fullName` chứa chuỗi (không phân biệt hoa/thường) |
+| `cursor` | Long | optional, lấy từ `nextCursor` của response trang trước; bỏ qua để lấy trang đầu |
+| `size` | int | optional, mặc định `20`, tối đa `100` |
+
+Response `200` — `CursorPageResponse<StaffResponse>`, sắp xếp theo `id` giảm dần (mới nhất trước):
+```json
+{
+  "items": [
+    { "id": 5, "code": "QA005", "fullName": "Trần Thị B", "role": "QA_INSPECTOR", "active": true }
+  ],
+  "nextCursor": 5,
+  "hasNext": true
+}
+```
+Truyền `nextCursor` của response hiện tại vào `cursor` của request kế tiếp để lấy trang sau;
+`hasNext = false` (và `nextCursor = null`) nghĩa là đã hết dữ liệu.
+
+---
+
+## 4b. Admin — Quản trị user
+
+Tất cả endpoint dưới đây **chỉ admin gọi được**; role khác → `403`. Kết hợp với
+`GET /api/master/staff` (mục 4) để list/search + `POST /api/auth/staff/{staffId}/reset-password`
+(mục 1) để đổi mật khẩu, đây là bộ API đủ để dựng màn quản trị user.
+
+### POST `/api/admin/staff` — tạo tài khoản mới
+Body:
+```json
+{ "code": "QA015", "fullName": "Phạm Văn D", "password": "123456", "role": "QA_INSPECTOR" }
+```
+`code`, `fullName`, `password` bắt buộc (`password` 6-100 ký tự); `role` bắt buộc, 1 trong
+`QA_INSPECTOR`/`QA_LEAD`/`ADMIN` (xem mục Enum dùng chung). Tài khoản mới luôn tạo với `active = true`.
+`code` trùng (không phân biệt hoa/thường) với tài khoản đã có → `400`.
+
+Response `201`:
+```json
+{ "id": 17, "code": "QA015", "fullName": "Phạm Văn D", "role": "QA_INSPECTOR", "active": true }
+```
+
+### PATCH `/api/admin/staff/{id}/lock`
+Khoá tài khoản (`active = false`): user không đăng nhập lại được (login → `401`/disabled), và mọi
+refresh token đang còn hiệu lực của user đó bị thu hồi ngay — access token cũ tự hết hạn theo
+`expiresInMs` (tối đa 1 giờ) và sau đó không refresh được nữa. Không cần body. Không tự khoá được
+chính mình → `400`. `id` không tồn tại → `404`. Response `204`.
+
+### PATCH `/api/admin/staff/{id}/unlock`
+Mở khoá tài khoản (`active = true`). Không cần body. `id` không tồn tại → `404`. Response `204`.
 
 ## 5. Purchase Order
 
@@ -388,7 +468,7 @@ flowchart TD
     L --> M[Mỗi Location: chọn ảnh từ máy]
     M --> N[POST /api/uploads/images multipart nhiều ảnh 1 lần]
     N --> O[Nhận mảng URL, gán vào location.images]
-    O --> P2{inspectionStage = FINAL?}
+    O --> P2{inspectionStage = FINAL/PREFINAL?}
     P2 -- Có --> P3[Hiện 4 khu vực upload specImages: mẫu duyệt/thông số/đóng gói/thẻ treo]
     P3 --> P4[POST /api/uploads/images, gán vào specImages theo đúng type]
     P2 -- Không --> P{Lưu nháp hay Nộp?}

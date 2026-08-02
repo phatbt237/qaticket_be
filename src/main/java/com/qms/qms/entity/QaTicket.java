@@ -76,7 +76,7 @@ public class QaTicket {
     @Column(name = "exported_at")
     private LocalDateTime exportedAt;
 
-    // AQL sampling plan fields, only populated when inspectionStage is FINAL.
+    // AQL sampling plan fields, only populated when inspectionStage is FINAL or PREFINAL.
     @Convert(converter = AqlLevelConverter.class)
     @Column(name = "aql_level", length = 10)
     private AqlLevel aqlLevel;

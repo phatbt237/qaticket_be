@@ -1,8 +1,17 @@
 package com.qms.qms.controller;
 
+import com.qms.qms.dto.CursorPageResponse;
 import com.qms.qms.dto.master.*;
+import com.qms.qms.entity.Staff;
 import com.qms.qms.repository.*;
+import com.qms.qms.service.StaffSpecifications;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -10,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Validated
 @RestController
 @RequestMapping("/api/master")
 public class MasterDataController {
@@ -41,10 +51,28 @@ public class MasterDataController {
         this.defectItemRepository = defectItemRepository;
     }
 
-    @Cacheable("staff")
+    /**
+     * Cursor (keyset) pagination ordered by id DESC (newest first): pass the previous
+     * response's {@code nextCursor} back in as {@code cursor} to fetch the next page.
+     * Omit {@code cursor} to get the first page. {@code name} filters by fullName (contains, case-insensitive).
+     */
     @GetMapping("/staff")
-    public List<StaffResponse> staff() {
-        return staffRepository.findAll().stream().map(StaffResponse::from).toList();
+    public CursorPageResponse<StaffResponse> staff(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        Specification<Staff> spec = Specification.allOf(
+                StaffSpecifications.fullNameContains(name),
+                StaffSpecifications.idBefore(cursor)
+        );
+        var pageable = PageRequest.of(0, size + 1, Sort.by(Sort.Direction.DESC, "id"));
+        List<Staff> rows = staffRepository.findAll(spec, pageable).getContent();
+
+        boolean hasNext = rows.size() > size;
+        List<Staff> page = hasNext ? rows.subList(0, size) : rows;
+        Long nextCursor = hasNext ? page.get(page.size() - 1).getId() : null;
+
+        return new CursorPageResponse<>(page.stream().map(StaffResponse::from).toList(), nextCursor, hasNext);
     }
 
     @Cacheable("factories")

@@ -218,9 +218,10 @@ public class QaTicketService {
         if (request.specImages() == null || request.specImages().isEmpty()) {
             return;
         }
-        if (request.inspectionStage() != InspectionStage.FINAL) {
+        if (request.inspectionStage() != InspectionStage.FINAL && request.inspectionStage() != InspectionStage.PREFINAL) {
             throw new IllegalArgumentException(
-                    "specImages is only allowed when inspectionStage is FINAL, got: " + request.inspectionStage());
+                    "specImages is only allowed when inspectionStage is FINAL or PREFINAL, got: "
+                            + request.inspectionStage());
         }
         for (QaTicketSpecImageRequest imgReq : request.specImages()) {
             QaTicketSpecImage image = new QaTicketSpecImage();
@@ -244,7 +245,7 @@ public class QaTicketService {
 
     /**
      * AQL sampling (aqlLevel/qtySize/actual defect counts) is only meaningful once inspection
-     * reaches FINAL stage, mirroring the existing specImages-only-on-FINAL rule above.
+     * reaches FINAL or PREFINAL stage, mirroring the existing specImages rule above.
      */
     private void applyAqlSampling(QaTicket ticket, QaTicketRequest request) {
         boolean anyAqlFieldSet = request.aqlLevel() != null || request.qtySize() != null
@@ -258,9 +259,9 @@ public class QaTicketService {
             ticket.setInspectionResult(null);
             return;
         }
-        if (request.inspectionStage() != InspectionStage.FINAL) {
+        if (request.inspectionStage() != InspectionStage.FINAL && request.inspectionStage() != InspectionStage.PREFINAL) {
             throw new IllegalArgumentException(
-                    "aqlLevel/qtySize/actualMajorDefects/actualMinorDefects are only allowed when inspectionStage is FINAL, got: "
+                    "aqlLevel/qtySize/actualMajorDefects/actualMinorDefects are only allowed when inspectionStage is FINAL or PREFINAL, got: "
                             + request.inspectionStage());
         }
         if (request.aqlLevel() == null || request.qtySize() == null) {
