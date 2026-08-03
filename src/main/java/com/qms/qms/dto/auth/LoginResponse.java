@@ -1,5 +1,6 @@
 package com.qms.qms.dto.auth;
 
+import com.qms.qms.entity.enums.StaffLanguage;
 import com.qms.qms.entity.enums.StaffRole;
 
 public record LoginResponse(
@@ -10,6 +11,7 @@ public record LoginResponse(
         Long staffId,
         String code,
         String fullName,
-        StaffRole role
+        StaffRole role,
+        StaffLanguage language
 ) {
 }

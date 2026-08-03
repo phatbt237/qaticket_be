@@ -1,0 +1,2 @@
+ALTER TABLE staff
+    ADD COLUMN language VARCHAR(2) NOT NULL DEFAULT 'VI';

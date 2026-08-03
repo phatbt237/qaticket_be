@@ -1,5 +1,6 @@
 package com.qms.qms.entity;
 
+import com.qms.qms.entity.enums.StaffLanguage;
 import com.qms.qms.entity.enums.StaffRole;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -32,4 +33,8 @@ public class Staff {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 2, nullable = false)
+    private StaffLanguage language = StaffLanguage.VI;
 }

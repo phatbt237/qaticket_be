@@ -1,5 +1,6 @@
 package com.qms.qms.controller;
 
+import com.qms.qms.dto.auth.ChangeLanguageRequest;
 import com.qms.qms.dto.auth.ChangePasswordRequest;
 import com.qms.qms.dto.auth.LoginRequest;
 import com.qms.qms.dto.auth.LoginResponse;
@@ -19,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,7 +58,7 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.issue(staff);
 
         return new LoginResponse(accessToken, refreshToken.getToken(), "Bearer", jwtService.getExpirationMs(),
-                staff.getId(), staff.getCode(), staff.getFullName(), staff.getRole());
+                staff.getId(), staff.getCode(), staff.getFullName(), staff.getRole(), staff.getLanguage());
     }
 
     @PostMapping("/refresh")
@@ -67,7 +69,7 @@ public class AuthController {
         String accessToken = jwtService.generateToken(staff);
 
         return new LoginResponse(accessToken, rotated.getToken(), "Bearer", jwtService.getExpirationMs(),
-                staff.getId(), staff.getCode(), staff.getFullName(), staff.getRole());
+                staff.getId(), staff.getCode(), staff.getFullName(), staff.getRole(), staff.getLanguage());
     }
 
     @PostMapping("/logout")
@@ -84,6 +86,15 @@ public class AuthController {
             throw new IllegalArgumentException("Mật khẩu cũ không đúng");
         }
         staff.setPassword(passwordEncoder.encode(request.newPassword()));
+        staffRepository.save(staff);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/language")
+    public ResponseEntity<Void> changeLanguage(@Valid @RequestBody ChangeLanguageRequest request,
+                                                @AuthenticationPrincipal StaffPrincipal principal) {
+        var staff = principal.getStaff();
+        staff.setLanguage(request.language());
         staffRepository.save(staff);
         return ResponseEntity.noContent().build();
     }

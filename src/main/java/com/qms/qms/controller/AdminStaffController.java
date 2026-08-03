@@ -3,6 +3,7 @@ package com.qms.qms.controller;
 import com.qms.qms.dto.admin.CreateStaffRequest;
 import com.qms.qms.dto.master.StaffResponse;
 import com.qms.qms.entity.Staff;
+import com.qms.qms.entity.enums.StaffLanguage;
 import com.qms.qms.entity.enums.StaffRole;
 import com.qms.qms.exception.ResourceNotFoundException;
 import com.qms.qms.repository.StaffRepository;
@@ -51,6 +52,7 @@ public class AdminStaffController {
         staff.setPassword(passwordEncoder.encode(request.password()));
         staff.setRole(request.role());
         staff.setActive(true);
+        staff.setLanguage(request.language() != null ? request.language() : StaffLanguage.VI);
         staff = staffRepository.save(staff);
         return ResponseEntity.status(HttpStatus.CREATED).body(StaffResponse.from(staff));
     }
